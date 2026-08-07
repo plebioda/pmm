@@ -1,5 +1,5 @@
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
-import { MySqlIcon } from '@percona/percona-ui';
+import { MongoIcon, MySqlIcon } from '@percona/percona-ui';
 import { NavItem } from 'types/navigation.types';
 import { ServiceType } from 'types/services.types';
 import { User, UserPreferences } from 'types/user.types';
@@ -9,6 +9,7 @@ import {
   PMM_NEW_NAV_GRAFANA_PATH,
   SEP_ATW_PATH,
   SEP_MYSQL_BACKUPS_PATH,
+  SEP_POM_PATH,
 } from 'lib/constants';
 import { ColorMode } from '@pmm/shared';
 import {
@@ -315,5 +316,28 @@ export const addSepApps = (): NavItem[] => [
     icon: MySqlIcon,
     url: SEP_MYSQL_BACKUPS_PATH,
     matches: [SEP_MYSQL_BACKUPS_PATH],
+  },
+  {
+    id: 'sep-pom',
+    text: 'PSMDB OpenManager',
+    icon: MongoIcon,
+    url: SEP_POM_PATH,
+    matches: [SEP_POM_PATH],
+    children: [
+      {
+        id: 'sep-pom-overview',
+        text: 'Overview',
+        url: SEP_POM_PATH,
+        // A cluster opens below the overview, so keep the parent entry selected
+        // while a detail page is showing.
+        matches: [`${SEP_POM_PATH}/clusters/*`],
+      },
+      {
+        id: 'sep-pom-discovery',
+        text: 'Discovery',
+        url: `${SEP_POM_PATH}/runs`,
+        matches: [`${SEP_POM_PATH}/runs`],
+      },
+    ],
   },
 ];

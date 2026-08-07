@@ -19,6 +19,11 @@ services:
     ulimits:
       memlock: 67108864
 
+    # Lets the SEP locations in pmm.conf reach a SEP backend running natively on
+    # the host (make dev-backend). Implicit on Docker Desktop, explicit on Linux.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     ports:
       - ${PMM_PORT_HTTPS:-443}:8443
       # For headless delve
@@ -52,6 +57,14 @@ services:
       - ./managed/data/alerting-templates/:/usr/local/percona/alerting-templates/
       # nginx config overrides
       - ./build/ansible/roles/nginx/files/conf.d/pmm.conf:/etc/nginx/conf.d/pmm.conf:ro
+      # SEP PostgreSQL exposure (PMM-15238 / percona/pmm#5700). The container runs
+      # the *image's* /opt/entrypoint.sh, so the branch's version has to be mounted
+      # over it or PMM_ENABLE_SEP is a silent no-op. postgres-migration comes along
+      # because the same PR moved the PG version literals into the entrypoint and
+      # passes them down as exported variables — the image's copy would abort.
+      - ./build/docker/server/entrypoint.sh:/opt/entrypoint.sh:ro
+      - ./build/ansible/roles/postgres/files/postgres-sep:/opt/ansible/roles/postgres/files/postgres-sep:ro
+      - ./build/ansible/roles/postgres/files/postgres-migration:/opt/ansible/roles/postgres/files/postgres-migration:ro
       # percona-ui
       # - ../percona-ui:/root/go/src/github.com/percona/percona-ui
       # grafana

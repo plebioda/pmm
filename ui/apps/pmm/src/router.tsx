@@ -12,6 +12,7 @@ import {
   PMM_NEW_NAV_PATH,
   SEP_ATW_PATH,
   SEP_MYSQL_BACKUPS_PATH,
+  SEP_POM_PATH,
 } from 'lib/constants';
 import { RealtimeSessionsPage } from 'pages/rta/sessions';
 import { Redirect, SettingsRedirect } from 'components/redirect';
@@ -19,6 +20,7 @@ import RealtimeOverviewPage from 'pages/rta/overview/RealtimeOverview';
 import RealtimeTab from 'pages/rta/tab/RealtimeTab';
 import { AlertsPage } from 'pages/alerting/status';
 import { AtwApp } from '@sep/plugins-atw';
+import { PomApp } from '@sep/plugins-pom';
 import { SchemaDrivenPlugin } from '@sep/framework';
 import { SepPage } from './sep/SepPage';
 
@@ -98,6 +100,18 @@ const router = createBrowserRouter(
               element: (
                 <SepPage>
                   <AtwApp />
+                </SepPage>
+              ),
+            },
+            {
+              // POM (PSMDB Open Manager) is bespoke like ATW: PomApp composes
+              // its own <Routes> (clusters overview at index, cluster detail,
+              // discovery runs), so this must be a splat. It reads the snapshot
+              // that pom_worker writes, via /apps/pom_api.
+              path: `${relativeToNav(SEP_POM_PATH)}/*`,
+              element: (
+                <SepPage>
+                  <PomApp />
                 </SepPage>
               ),
             },

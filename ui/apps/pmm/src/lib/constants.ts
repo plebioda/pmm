@@ -22,6 +22,7 @@ export const PMM_NEW_NAV_HOME_URL = `${PMM_NEW_NAV_PATH}/graph/d/pmm-home`;
 // `routeBase`, and a mismatch silently sends them outside the mount.
 export const SEP_ATW_PATH = `${PMM_NEW_NAV_PATH}/sep/atw`;
 export const SEP_MYSQL_BACKUPS_PATH = `${PMM_NEW_NAV_PATH}/sep/mysql-backups`;
+export const SEP_POM_PATH = `${PMM_NEW_NAV_PATH}/sep/pom`;
 
 export const INTERVALS_MS = {
   // 5 mins
