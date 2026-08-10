@@ -65,6 +65,8 @@ export const UNAVAILABLE_PHRASE: Record<PomUnavailableReason, string> = {
   metric_not_collected: 'Not collected — no collector produces this metric yet',
   no_version_catalog:
     'No version catalog yet — PMM has no PSMDB release data to compare against',
+  not_applicable:
+    'Not applicable — a standalone or a router has no replica-set oplog, and a single-member set has no peer to lag behind',
 };
 
 /** Fallback for a reason code the frontend has not been taught. */
