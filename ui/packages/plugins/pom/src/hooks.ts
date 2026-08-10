@@ -23,9 +23,8 @@ import {
 } from '@tanstack/react-query';
 import { apiClient } from '@sep/api';
 import type {
-  PomClusterDetailResponse,
-  PomClusterFilters,
-  PomClusterListResponse,
+  PomServiceRow,
+  PomTopologyResponse,
   PomRun,
   PomRunAccepted,
 } from './types';
@@ -38,7 +37,7 @@ export const POM_RUNS_LIMIT = 25;
 /** Poll interval while a discovery run is in flight (ms). */
 const RUN_POLL_MS = 3000;
 
-const clustersKey = ['pom', 'clusters'] as const;
+const topologyKey = ['pom', 'topology'] as const;
 const runsKey = ['pom', 'runs'] as const;
 
 /** True while a run has not reached a terminal status. */
@@ -47,35 +46,19 @@ export function isRunActive(status: string | undefined): boolean {
 }
 
 /**
- * List clusters from the latest terminal snapshot.
+ * The whole estate from the latest terminal snapshot.
  *
- * Filters narrow `clusters` but never `summary` — that asymmetry is deliberate
- * server-side, so the header can say "2 of 4" without a second request. Keeping
- * the previous page in place stops the table collapsing to a spinner whenever a
- * filter changes.
+ * One request, one document: the API assembles the tree per run, so there is no
+ * per-cluster fetch and nothing to paginate. Keeping the previous page in place stops
+ * the table collapsing to a spinner while a refetch is in flight.
  */
-export function usePomClusters(filters: PomClusterFilters = {}) {
-  return useQuery<PomClusterListResponse>({
-    queryKey: [...clustersKey, filters],
+export function usePomTopology() {
+  return useQuery<PomTopologyResponse>({
+    queryKey: topologyKey,
     placeholderData: keepPreviousData,
     queryFn: async () => {
-      const { data } = await apiClient.get<PomClusterListResponse>(
-        `${POM_BASE}/clusters`,
-        { params: filters }
-      );
-      return data;
-    },
-  });
-}
-
-/** One cluster's full document, members included. */
-export function usePomCluster(clusterId: string | undefined) {
-  return useQuery<PomClusterDetailResponse>({
-    queryKey: ['pom', 'clusters', clusterId],
-    enabled: Boolean(clusterId),
-    queryFn: async () => {
-      const { data } = await apiClient.get<PomClusterDetailResponse>(
-        `${POM_BASE}/clusters/${clusterId}`
+      const { data } = await apiClient.get<PomTopologyResponse>(
+        `${POM_BASE}/topology`
       );
       return data;
     },
@@ -83,10 +66,33 @@ export function usePomCluster(clusterId: string | undefined) {
 }
 
 /**
+ * Flatten the tree into one row per service, carrying its grouping keys.
+ *
+ * The table sorts and filters across the whole estate, which a nested render cannot
+ * do; the nesting survives as the environment and cluster columns.
+ */
+export function toServiceRows(
+  topology: PomTopologyResponse | undefined
+): PomServiceRow[] {
+  if (!topology) {
+    return [];
+  }
+  return topology.environments.flatMap((environment) =>
+    environment.clusters.flatMap((cluster) =>
+      cluster.services.map((service) => ({
+        ...service,
+        env_name: environment.env_name,
+        cluster_name: cluster.name,
+      }))
+    )
+  );
+}
+
+/**
  * Run history, newest first.
  *
  * Polls while the newest run is still going, which is also what makes the
- * clusters list refresh after a triggered run lands.
+ * topology refresh after a triggered run lands.
  */
 export function usePomRuns(limit: number = POM_RUNS_LIMIT) {
   return useQuery<PomRun[]>({
@@ -104,13 +110,13 @@ export function usePomRuns(limit: number = POM_RUNS_LIMIT) {
 }
 
 /** One run, with its per-service errors. */
-export function usePomRun(runId: string | undefined) {
+export function usePomRun(run_id: string | undefined) {
   return useQuery<PomRun>({
-    queryKey: ['pom', 'runs', 'detail', runId],
-    enabled: Boolean(runId),
+    queryKey: ['pom', 'runs', 'detail', run_id],
+    enabled: Boolean(run_id),
     queryFn: async () => {
       const { data } = await apiClient.get<PomRun>(
-        `${POM_BASE}/discovery/runs/${runId}`
+        `${POM_BASE}/discovery/runs/${run_id}`
       );
       return data;
     },
@@ -149,7 +155,7 @@ export function useTriggerPomRun() {
 export function useInvalidatePomSnapshot() {
   const queryClient = useQueryClient();
   return () => {
-    queryClient.invalidateQueries({ queryKey: clustersKey });
+    queryClient.invalidateQueries({ queryKey: topologyKey });
     queryClient.invalidateQueries({ queryKey: runsKey });
   };
 }

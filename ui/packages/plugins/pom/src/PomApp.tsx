@@ -16,20 +16,20 @@
  */
 
 import { Route, Routes } from 'react-router-dom';
-import { ClustersOverviewPage } from './ClustersOverviewPage';
-import { ClusterDetailPage } from './ClusterDetailPage';
+import { TopologyPage } from './TopologyPage';
 import { RunsPage } from './RunsPage';
 
 /**
- * POM app router. The shell mounts this at ``sep/pom/*``; the clusters overview
- * is the index route, a cluster opens at ``clusters/:clusterId``, and the
- * discovery history lives at ``runs``.
+ * POM app router. The shell mounts this at ``sep/pom/*``; the topology table is the
+ * index route and the discovery history lives at ``runs``.
+ *
+ * There is no per-cluster route: the snapshot is one document and the table renders
+ * all of it, so a detail page would only re-show rows the reader already has.
  */
 export function PomApp() {
   return (
     <Routes>
-      <Route index element={<ClustersOverviewPage />} />
-      <Route path="clusters/:clusterId" element={<ClusterDetailPage />} />
+      <Route index element={<TopologyPage />} />
       <Route path="runs" element={<RunsPage />} />
     </Routes>
   );

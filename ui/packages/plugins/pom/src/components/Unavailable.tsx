@@ -17,7 +17,7 @@
 
 import { Box, Tooltip } from '@mui/material';
 import { UNAVAILABLE_FALLBACK, UNAVAILABLE_PHRASE } from '../constants';
-import type { PomCluster, PomUnavailableReason } from '../types';
+import type { PomUnavailableReason } from '../types';
 
 interface UnavailableProps {
   /** Reason code from the document's `unavailable` map. */
@@ -47,25 +47,4 @@ export function Unavailable({ reason }: UnavailableProps) {
       </Box>
     </Tooltip>
   );
-}
-
-/**
- * Render `value` when the cluster observed it, otherwise the reason it did not.
- *
- * Takes the whole cluster so the reason lookup stays keyed off the document
- * rather than being passed around by hand at every call site.
- */
-export function ClusterValue({
-  cluster,
-  field,
-  children,
-}: {
-  cluster: PomCluster;
-  field: string;
-  children: React.ReactNode;
-}) {
-  if (children === null || children === undefined || children === '') {
-    return <Unavailable reason={cluster.unavailable?.[field]} />;
-  }
-  return <>{children}</>;
 }

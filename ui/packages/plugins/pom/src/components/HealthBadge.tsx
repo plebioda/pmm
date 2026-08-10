@@ -17,26 +17,27 @@
 
 import { Chip } from '@percona/percona-ui';
 import {
-  HEALTH_COLOR,
-  HEALTH_LABEL,
   RUN_STATUS_COLOR,
   RUN_STATUS_LABEL,
+  SERVICE_STATUS_COLOR,
+  SERVICE_STATUS_LABEL,
 } from '../constants';
-import type { PomHealthStatus, PomRunStatus } from '../types';
+import type { PomRunStatus, PomServiceStatus } from '../types';
 
 /**
- * Cluster health as a chip.
+ * Service reachability as a chip.
  *
- * `unknown` is outlined rather than filled so it reads as a distinct state — the
- * fleet has not been observed — instead of a fourth severity on the same scale.
+ * DOWN covers both "the exporter said 0" and "the service produced no metrics at
+ * all" — the worker collapses them deliberately, because from the estate's point of
+ * view an unreachable service and an unmonitored one are the same problem.
  */
-export function HealthBadge({ status }: { status: PomHealthStatus }) {
+export function StatusBadge({ status }: { status: PomServiceStatus }) {
   return (
     <Chip
       size="small"
-      label={HEALTH_LABEL[status] ?? status}
-      color={HEALTH_COLOR[status] ?? 'default'}
-      variant={status === 'unknown' ? 'outlined' : 'filled'}
+      label={SERVICE_STATUS_LABEL[status] ?? status}
+      color={SERVICE_STATUS_COLOR[status] ?? 'default'}
+      variant={status === 'DOWN' ? 'outlined' : 'filled'}
     />
   );
 }
