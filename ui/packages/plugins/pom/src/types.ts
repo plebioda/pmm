@@ -26,14 +26,15 @@
  */
 
 /** Health verdicts the worker derives. `unknown` is the common case, not an edge. */
-export type PomHealthStatus = 'ok' | 'warning' | 'critical' | 'unknown';
+/** Whether the exporter reached the service on this run. */
+export type PomServiceStatus = 'UP' | 'DOWN';
 
-/** Cluster topologies the worker recognises. */
-export type PomClusterType = 'replica_set' | 'sharded_cluster' | 'standalone';
+/** What the process is in its cluster. */
+export type PomProcessRole = 'mongod' | 'mongos' | 'configsvr' | 'shardsvr';
 
 /**
  * Why a field is null. The worker exports these as constants precisely because
- * the frontend matches on them — see `projection.py`.
+ * the frontend matches on them.
  */
 export type PomUnavailableReason =
   | 'service_not_observed'
@@ -41,105 +42,57 @@ export type PomUnavailableReason =
   | 'no_version_catalog'
   | 'not_applicable';
 
-/** One reason behind a cluster's health verdict. Rendered verbatim to the user. */
-export interface PomHealthReason {
-  code: string;
-  message: string;
-  severity: PomHealthStatus;
-}
-
-export interface PomHealth {
-  status: PomHealthStatus;
-  stale: boolean;
-  observed_at: string | null;
-  reasons: PomHealthReason[];
-}
-
-export interface PomVersions {
-  running: string[];
-  installed: string[];
-  /** True when members disagree on the running version. Null when unobserved. */
-  mixed: boolean | null;
-  /** Installed differs from running — a restart would change the version. */
-  restart_pending: boolean | null;
-}
-
-export interface PomUpdate {
-  available: boolean | null;
-  reason: PomUnavailableReason | null;
-}
-
-export interface PomMember {
-  service_id: number;
-  service_name: string;
-  observed: boolean;
-  /** Replica-set state, e.g. `PRIMARY`. Null when the node was not observed. */
-  state: string | null;
-  port: number | null;
-  replication_set: string | null;
-  running_version: string | null;
-  installed_version: string | null;
-  os: string | null;
-  /** Whether the member's server process is up. Role-neutral: a router runs
-   *  `mongos` and never a mongod. */
-  server_running: boolean | null;
-  /** Which server program was found — `mongod`, `mongos`, or null if neither. */
-  server_process: 'mongod' | 'mongos' | null;
-  uptime_seconds: number | null;
-  executor_host: string | null;
-  /** Seconds this member trails the primary. `0` is a real reading on an idle
-   *  replica set — never render a falsy check here. Null on a router, a
-   *  standalone, or a single-member set, which have no peer to lag behind. */
-  replication_lag_seconds: number | null;
-  /** Seconds of history the oplog holds. Null on a router or a standalone,
-   *  neither of which has an oplog at all. */
-  oplog_window_seconds: number | null;
-  /** Why any of the above is null, keyed by field name. */
-  unavailable?: Partial<Record<string, PomUnavailableReason>>;
-}
-
 /**
- * One cluster's status document, as assembled by the worker.
+ * One monitored MongoDB service.
  *
- * `members` is present only on the detail response — the list endpoint omits it
- * so the payload does not scale with the fleet's node count.
+ * Two sentinel conventions the table depends on, and they differ on purpose:
+ *
+ * - `cpu_usage_percent` / `connections_free_percent` are **-1 when not measured**, never
+ *   null and never 0 — zero CPU is a real reading, so the numeric sentinel is what
+ *   keeps "idle" and "unknown" apart in a numeric column.
+ * - `replication_lag_seconds` / `oplog_window_seconds` are **null when they do not apply**
+ *   — a router and a standalone have no replica-set oplog. Null means "not a thing
+ *   here", which is not the same as -1's "we could not measure it".
  */
-export interface PomCluster {
-  id: string;
-  name: string;
-  type: PomClusterType;
-  health: PomHealth;
-  environment: string | null;
-  cluster: string | null;
+export interface PomService {
+  service_name: string;
+  host: string | null;
+  endpoint: string | null;
+  service_id: string | null;
+  service_type: string | null;
+  version: string | null;
+  vendor: string | null;
+  edition: string | null;
   replication_set: string | null;
-  members_total: number;
-  members_observed: number;
-  members_by_state: Record<string, number>;
-  versions: PomVersions;
-  max_replication_lag_seconds: number | null;
+  state: string | null;
+  status: PomServiceStatus;
+  cpu_usage_percent: number;
+  connections_free_percent: number;
+  process_role: PomProcessRole;
+  replication_lag_seconds: number | null;
   oplog_window_seconds: number | null;
-  last_seen: string | null;
-  update: PomUpdate;
-  /** Maps a null field name to the reason it is null. Never means "zero". */
-  unavailable: Partial<Record<string, PomUnavailableReason>>;
-  schema_version: number;
-  members?: PomMember[];
 }
 
-export interface PomSummary {
+/** One cluster or replica set. `name` is null when its services carry no label. */
+export interface PomCluster {
+  name: string | null;
+  services: PomService[];
+}
+
+/** One monitoring environment. `env_name` is null when unset. */
+export interface PomEnvironment {
+  env_name: string | null;
+  clusters: PomCluster[];
+}
+
+/** Fleet-level counts, computed by the worker so the UI never re-derives them. */
+export interface PomTopologySummary {
+  environments: number;
   clusters: number;
-  by_health: Partial<Record<PomHealthStatus, number>>;
-  by_type: Partial<Record<PomClusterType, number>>;
   services_total: number;
-  services_observed: number;
-  /** The honest headline: in inventory, but nothing answered for it. */
-  services_unobserved: number;
-}
-
-export interface PomGroup {
-  key: string;
-  label: string;
-  count: number;
+  services_up: number;
+  services_down: number;
+  by_process_role: Partial<Record<PomProcessRole, number>>;
 }
 
 /** Provenance every snapshot-backed response repeats. */
@@ -151,23 +104,24 @@ export interface PomSnapshotEnvelope {
   run_id: string;
 }
 
-export interface PomClusterListResponse extends PomSnapshotEnvelope {
-  summary: PomSummary;
-  groups: PomGroup[];
-  clusters: PomCluster[];
-  /** Reserved for pagination; the API always sends null today. */
-  next_cursor: string | null;
+/** The whole estate, as one document. */
+export interface PomTopologyResponse {
+  snapshot: PomSnapshotEnvelope;
+  origin_node: string | null;
+  source_queries: string[];
+  summary: PomTopologySummary;
+  environments: PomEnvironment[];
 }
 
-export interface PomClusterDetailResponse extends PomSnapshotEnvelope {
-  cluster: PomCluster;
-}
-
-/** Server-side filters `GET /clusters` accepts. */
-export interface PomClusterFilters {
-  health?: PomHealthStatus;
-  type?: PomClusterType;
-  environment?: string;
+/**
+ * One service flattened out of the tree, carrying the two grouping keys.
+ *
+ * The table renders a flat list so it can sort and filter across the whole estate;
+ * the nesting is preserved as columns rather than as rows.
+ */
+export interface PomServiceRow extends PomService {
+  env_name: string | null;
+  cluster_name: string | null;
 }
 
 export type PomRunStatus = 'running' | 'success' | 'partial' | 'failed';

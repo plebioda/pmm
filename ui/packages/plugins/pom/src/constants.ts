@@ -17,48 +17,37 @@
 
 import type { ChipProps } from '@mui/material/Chip';
 import type {
-  PomClusterType,
-  PomHealthStatus,
+  PomProcessRole,
   PomRunStatus,
+  PomServiceStatus,
   PomUnavailableReason,
 } from './types';
 
 /** Base path of POM's read API under SEP's `/api` prefix. */
-export const POM_ROUTE_CLUSTERS = '';
+export const POM_ROUTE_TOPOLOGY = '';
 export const POM_ROUTE_RUNS = 'runs';
 
-export const HEALTH_LABEL: Record<PomHealthStatus, string> = {
-  ok: 'Healthy',
-  warning: 'Warning',
-  critical: 'Critical',
-  unknown: 'Unknown',
+export const SERVICE_STATUS_LABEL: Record<PomServiceStatus, string> = {
+  UP: 'Up',
+  DOWN: 'Down',
 };
 
-/**
- * `primary` and `secondary` are disabled on Peak UI's Chip, so the palette here
- * is limited to the semantic colors. `unknown` gets `info` rather than `default`
- * on purpose: it is the dominant state of a real fleet — a service in inventory
- * that nothing could reach — and a grey chip reads as "unimportant".
- */
-export const HEALTH_COLOR: Record<PomHealthStatus, ChipProps['color']> = {
-  ok: 'success',
-  warning: 'warning',
-  critical: 'error',
-  unknown: 'info',
+export const SERVICE_STATUS_COLOR: Record<
+  PomServiceStatus,
+  ChipProps['color']
+> = {
+  UP: 'success',
+  DOWN: 'error',
 };
 
-export const CLUSTER_TYPE_LABEL: Record<PomClusterType, string> = {
-  replica_set: 'Replica set',
-  sharded_cluster: 'Sharded cluster',
-  standalone: 'Standalone',
+/** Display names for the process roles, which the raw values abbreviate heavily. */
+export const PROCESS_ROLE_LABEL: Record<PomProcessRole, string> = {
+  mongod: 'mongod',
+  mongos: 'Router',
+  configsvr: 'Config server',
+  shardsvr: 'Shard',
 };
 
-/**
- * Human phrasing for the worker's `unavailable` reason codes.
- *
- * These strings are the whole point of the `unavailable` map: POM never reports
- * a missing observation as `0`, so every em-dash on screen can say why.
- */
 export const UNAVAILABLE_PHRASE: Record<PomUnavailableReason, string> = {
   service_not_observed:
     'Not observed — the service has no live executor, or it did not answer this run',
