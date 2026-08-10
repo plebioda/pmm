@@ -98,6 +98,30 @@ const MEMBER_COLUMNS: MRT_ColumnDef<PomMember>[] = [
       ),
   },
   {
+    accessorKey: 'replication_lag_seconds',
+    header: 'Repl. lag',
+    Cell: ({ row: { original } }) =>
+      // `== null`, never a falsy check: 0 is a real reading on an idle replica
+      // set, and rendering it as unavailable would report a healthy member as
+      // unobservable. The reason comes from the member's own map, so a router
+      // says "not applicable" rather than "not observed".
+      original.replication_lag_seconds == null ? (
+        <Unavailable reason={original.unavailable?.replication_lag_seconds} />
+      ) : (
+        formatDuration(original.replication_lag_seconds) || '0s'
+      ),
+  },
+  {
+    accessorKey: 'oplog_window_seconds',
+    header: 'Oplog window',
+    Cell: ({ row: { original } }) =>
+      original.oplog_window_seconds == null ? (
+        <Unavailable reason={original.unavailable?.oplog_window_seconds} />
+      ) : (
+        formatDuration(original.oplog_window_seconds) || '0s'
+      ),
+  },
+  {
     accessorKey: 'executor_host',
     header: 'Executor host',
     Cell: ({ row: { original } }) =>

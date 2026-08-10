@@ -38,7 +38,8 @@ export type PomClusterType = 'replica_set' | 'sharded_cluster' | 'standalone';
 export type PomUnavailableReason =
   | 'service_not_observed'
   | 'metric_not_collected'
-  | 'no_version_catalog';
+  | 'no_version_catalog'
+  | 'not_applicable';
 
 /** One reason behind a cluster's health verdict. Rendered verbatim to the user. */
 export interface PomHealthReason {
@@ -86,6 +87,15 @@ export interface PomMember {
   server_process: 'mongod' | 'mongos' | null;
   uptime_seconds: number | null;
   executor_host: string | null;
+  /** Seconds this member trails the primary. `0` is a real reading on an idle
+   *  replica set — never render a falsy check here. Null on a router, a
+   *  standalone, or a single-member set, which have no peer to lag behind. */
+  replication_lag_seconds: number | null;
+  /** Seconds of history the oplog holds. Null on a router or a standalone,
+   *  neither of which has an oplog at all. */
+  oplog_window_seconds: number | null;
+  /** Why any of the above is null, keyed by field name. */
+  unavailable?: Partial<Record<string, PomUnavailableReason>>;
 }
 
 /**

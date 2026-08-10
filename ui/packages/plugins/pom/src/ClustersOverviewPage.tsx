@@ -49,7 +49,7 @@ import type {
 
 const ANY = 'any';
 
-/** Columns mirror the mockup's list view; two of them have no data yet. */
+/** Columns mirror the mockup's list view. */
 function useColumns(base: string): MRT_ColumnDef<PomCluster>[] {
   return useMemo(
     () => [
