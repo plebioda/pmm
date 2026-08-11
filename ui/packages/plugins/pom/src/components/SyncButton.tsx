@@ -24,9 +24,9 @@ import {
   Typography,
 } from '@mui/material';
 import SyncIcon from '@mui/icons-material/Sync';
-import { ApiError } from '@sep/api';
 import {
   isRunActive,
+  PomApiError,
   useInvalidatePomSnapshot,
   usePomRuns,
   useTriggerPomRun,
@@ -55,10 +55,10 @@ export function SyncButton() {
   }, [running, invalidateSnapshot]);
 
   // 409 means a run is already in flight — the expected answer to a double
-  // click, not a failure. `apiClient` normalizes rejections to ApiError, so the
-  // status is on the error itself.
+  // click, not a failure. The transport carries the status onto the error so the
+  // two can be told apart here.
   const conflict =
-    trigger.error instanceof ApiError && trigger.error.status === 409;
+    trigger.error instanceof PomApiError && trigger.error.status === 409;
   const failure = trigger.error && !conflict ? (trigger.error as Error) : null;
 
   return (

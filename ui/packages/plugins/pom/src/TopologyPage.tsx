@@ -106,6 +106,17 @@ function useColumns(): MRT_ColumnDef<PomServiceRow>[] {
           original.version ?? <Unavailable reason="service_not_observed" />,
       },
       {
+        accessorKey: 'installed_version',
+        header: 'Installed',
+        // Reads "not collected" rather than "not observed": unlike every other
+        // column this one needs an on-host probe, so its absence says the discovery
+        // app has not run here -- not that the service is unreachable.
+        Cell: ({ row: { original } }) =>
+          original.installed_version ?? (
+            <Unavailable reason="metric_not_collected" />
+          ),
+      },
+      {
         accessorKey: 'vendor',
         header: 'Vendor',
         Cell: ({ row: { original } }) =>

@@ -11,7 +11,7 @@ import {
   PMM_NEW_NAV_GRAFANA_PATH,
   SEP_ATW_PATH,
   SEP_MYSQL_BACKUPS_PATH,
-  SEP_POM_PATH,
+  POM_PATH,
 } from 'lib/constants';
 import { ColorMode } from '@pmm/shared';
 import {
@@ -319,26 +319,36 @@ export const addSepApps = (): NavItem[] => [
     url: SEP_MYSQL_BACKUPS_PATH,
     matches: [SEP_MYSQL_BACKUPS_PATH],
   },
+];
+
+/**
+ * POM's navigation, deliberately not part of `addSepApps`.
+ *
+ * Those entries are gated as a group on SEP, and the group is expected to gain a
+ * flag gate with real auth. POM is served by pmm-managed and reads PMM's own data,
+ * so hiding it when SEP is off or unreachable would hide a working page.
+ */
+export const addPom = (): NavItem[] => [
   {
-    id: 'sep-pom',
+    id: 'pom',
     text: 'PSMDB OpenManager',
     icon: MongoIcon,
-    url: SEP_POM_PATH,
-    matches: [SEP_POM_PATH],
+    url: POM_PATH,
+    matches: [POM_PATH],
     children: [
       {
-        id: 'sep-pom-overview',
+        id: 'pom-overview',
         text: 'Overview',
-        url: SEP_POM_PATH,
+        url: POM_PATH,
         // A cluster opens below the overview, so keep the parent entry selected
         // while a detail page is showing.
-        matches: [`${SEP_POM_PATH}/clusters/*`],
+        matches: [`${POM_PATH}/clusters/*`],
       },
       {
-        id: 'sep-pom-discovery',
+        id: 'pom-discovery',
         text: 'Discovery',
-        url: `${SEP_POM_PATH}/runs`,
-        matches: [`${SEP_POM_PATH}/runs`],
+        url: `${POM_PATH}/runs`,
+        matches: [`${POM_PATH}/runs`],
       },
     ],
   },

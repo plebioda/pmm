@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, createBrowserRouter } from 'react-router-dom';
+import { Navigate, createBrowserRouter, useLocation } from 'react-router-dom';
 import { Settings } from 'pages/settings';
 import { Updates } from 'pages/updates';
 import { UpdateClients } from 'pages/update-clients/UpdateClients';
@@ -12,7 +12,8 @@ import {
   PMM_NEW_NAV_PATH,
   SEP_ATW_PATH,
   SEP_MYSQL_BACKUPS_PATH,
-  SEP_POM_PATH,
+  POM_PATH,
+  LEGACY_SEP_POM_PATH,
 } from 'lib/constants';
 import { RealtimeSessionsPage } from 'pages/rta/sessions';
 import { Redirect, SettingsRedirect } from 'components/redirect';
@@ -21,6 +22,7 @@ import RealtimeTab from 'pages/rta/tab/RealtimeTab';
 import { AlertsPage } from 'pages/alerting/status';
 import { AtwApp } from '@sep/plugins-atw';
 import { PomApp } from '@sep/plugins-pom';
+import { PomPage } from 'pom/PomPage';
 import { SchemaDrivenPlugin } from '@sep/framework';
 import { SepPage } from './sep/SepPage';
 
@@ -28,6 +30,18 @@ import { SepPage } from './sep/SepPage';
 // shared SEP constants are absolute (the nav and each plugin's `routeBase` need
 // them that way), so drop the parent prefix and its separator.
 const relativeToNav = (path: string) => path.slice(PMM_NEW_NAV_PATH.length + 1);
+
+/**
+ * Send the old `/sep/pom` links to `/pom`, subpath and query intact.
+ *
+ * `<Navigate to={POM_PATH}>` would drop everything after the mount, landing a
+ * bookmarked cluster detail on the overview instead.
+ */
+const PomRedirect = () => {
+  const { pathname, search, hash } = useLocation();
+  const moved = pathname.replace(LEGACY_SEP_POM_PATH, POM_PATH);
+  return <Navigate to={`${moved}${search}${hash}`} replace />;
+};
 
 const router = createBrowserRouter(
   [
@@ -106,14 +120,22 @@ const router = createBrowserRouter(
             {
               // POM (PSMDB Open Manager) is bespoke like ATW: PomApp composes
               // its own <Routes> (the topology table at index, discovery runs),
-              // so this must be a splat. It reads the snapshot that pom_worker
-              // writes, via /apps/pom_api.
-              path: `${relativeToNav(SEP_POM_PATH)}/*`,
+              // so this must be a splat. It reads the topology document from
+              // pmm-managed at /v1/pom, which derives it from PMM's own inventory
+              // and VictoriaMetrics -- no SEP call on any browser path, which is
+              // why it is wrapped in PomPage rather than SepPage.
+              path: `${relativeToNav(POM_PATH)}/*`,
               element: (
-                <SepPage>
+                <PomPage>
                   <PomApp />
-                </SepPage>
+                </PomPage>
               ),
+            },
+            {
+              // POM answered under /sep for as long as its backend was a SEP app.
+              // Kept so links and bookmarks from that era still land.
+              path: `${relativeToNav(LEGACY_SEP_POM_PATH)}/*`,
+              element: <PomRedirect />,
             },
             {
               path: `${relativeToNav(SEP_MYSQL_BACKUPS_PATH)}/*`,
