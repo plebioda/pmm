@@ -112,12 +112,6 @@ function useColumns(): MRT_ColumnDef<PomServiceRow>[] {
           original.vendor ?? <Unavailable reason="service_not_observed" />,
       },
       {
-        accessorKey: 'edition',
-        header: 'Edition',
-        Cell: ({ row: { original } }) =>
-          original.edition ?? <Unavailable reason="service_not_observed" />,
-      },
-      {
         accessorKey: 'endpoint',
         header: 'Endpoint',
         Cell: ({ row: { original } }) =>
