@@ -105,9 +105,9 @@ const router = createBrowserRouter(
             },
             {
               // POM (PSMDB Open Manager) is bespoke like ATW: PomApp composes
-              // its own <Routes> (clusters overview at index, cluster detail,
-              // discovery runs), so this must be a splat. It reads the snapshot
-              // that pom_worker writes, via /apps/pom_api.
+              // its own <Routes> (the topology table at index, discovery runs),
+              // so this must be a splat. It reads the snapshot that pom_worker
+              // writes, via /apps/pom_api.
               path: `${relativeToNav(SEP_POM_PATH)}/*`,
               element: (
                 <SepPage>
