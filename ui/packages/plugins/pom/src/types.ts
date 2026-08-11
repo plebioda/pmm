@@ -16,13 +16,12 @@
  */
 
 /**
- * Wire types for POM's read API (`/api/apps/pom_api`).
+ * Wire types for POM's read API, served by pmm-managed at `/v1/pom`.
  *
- * Hand-written rather than generated: `pom_api` is not in the checked-in OpenAPI
- * spec yet, and the API deliberately types `clusters` as `list[dict[str, Any]]`
- * so the document contract lives in one place — the worker's `projection.py`.
- * This file is the frontend's copy of that shape; regenerate from the spec once
- * `make regen-specs` has run in SEP.
+ * Hand-written rather than generated: POM is not in PMM's checked-in OpenAPI client
+ * yet, so this file is the frontend's copy of the document contract. The authority is
+ * `api/pom/v1/pom.proto`; regenerate from it once POM joins the `SPECS` list in
+ * `api/Makefile`.
  */
 
 /** Health verdicts the worker derives. `unknown` is the common case, not an edge. */
@@ -71,6 +70,17 @@ export interface PomService {
   process_role: PomProcessRole;
   replication_lag_seconds: number | null;
   oplog_window_seconds: number | null;
+
+  /**
+   * Probe-only, and null wherever SEP's `pom_discovery` app has not run.
+   *
+   * `installed_version` is the binary on disk, which is not necessarily the server
+   * that is running: divergence from `version` is the upgraded-but-not-restarted
+   * case, and no metric anywhere carries it.
+   */
+  installed_version: string | null;
+  config_path: string | null;
+  argv: string | null;
 }
 
 /** One cluster or replica set. `name` is null when its services carry no label. */
