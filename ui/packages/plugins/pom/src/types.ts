@@ -134,6 +134,53 @@ export interface PomServiceRow extends PomService {
   cluster_name: string | null;
 }
 
+/**
+ * One cluster rolled up out of its services, carrying its environment.
+ *
+ * The overview answers "what is out there, and is any of it unhappy" one level above
+ * the service table: a row per cluster, grouped by environment. Everything here is
+ * derived from the same document the topology table renders, so the two can never
+ * disagree -- there is no second endpoint and no second snapshot.
+ */
+export interface PomClusterRow {
+  env_name: string | null;
+  cluster_name: string | null;
+  /** The cluster's own services, so unfolding a row needs no second lookup. */
+  services: PomService[];
+  services_total: number;
+  services_up: number;
+  services_down: number;
+  by_process_role: Partial<Record<PomProcessRole, number>>;
+  /** Replica-set member states, counted. Empty for routers and standalones. */
+  by_state: Record<string, number>;
+  /** Distinct running versions. More than one is a mixed-version cluster. */
+  versions: string[];
+  /**
+   * The worst lag in the cluster, and the tightest oplog window.
+   *
+   * Both are null when no service in the cluster reports one -- a sharded cluster's
+   * routers have neither, and an unobserved cluster has nothing at all.
+   */
+  max_replication_lag_seconds: number | null;
+  min_oplog_window_seconds: number | null;
+}
+
+/**
+ * One environment and everything under it, ready to render as its own table.
+ *
+ * The overview gives each environment a table of its own rather than one table with
+ * environment group rows: environments are what estates are actually divided by, and
+ * a per-environment table keeps that division visible even when one of them is long
+ * enough to scroll past.
+ */
+export interface PomEnvironmentSection {
+  env_name: string | null;
+  clusters: PomClusterRow[];
+  services_total: number;
+  services_up: number;
+  services_down: number;
+}
+
 export type PomRunStatus = 'running' | 'success' | 'partial' | 'failed';
 
 /**
@@ -166,6 +213,47 @@ export interface PomRun {
 }
 
 export interface PomRunAccepted {
+  run_id: string;
+  status: PomRunStatus;
+  started_at: string;
+}
+
+/**
+ * What one probe sweep reached.
+ *
+ * `resolved` versus `answered` is the diagnostic split, and it is the pair worth
+ * reading first: resolved says the service mapped to a live executor host, answered
+ * says that node ran the payload. `resolved=9, answered=0` is a healthy mapping and
+ * broken executors, which a single failure count would hide. Orphaned services are
+ * not an error — they are services with no executor to probe.
+ */
+export interface PomProbeCounts {
+  services_total: number;
+  services_resolved: number;
+  services_orphaned: number;
+  services_answered: number;
+}
+
+/**
+ * One sweep of SEP's `pom_discovery` app.
+ *
+ * Distinct from `PomRun`, which is pmm-managed rebuilding the topology document in a
+ * tenth of a second from inventory and VictoriaMetrics. A sweep runs a payload on
+ * every database host over Nomad and takes tens of seconds; what it collects is the
+ * on-host facts no metric carries.
+ */
+export interface PomProbeRun {
+  run_id: string;
+  status: PomRunStatus;
+  started_at: string;
+  finished_at: string | null;
+  counts: PomProbeCounts;
+  facts_collected: number;
+  /** Why the sweep itself failed, when it did. */
+  error: string | null;
+}
+
+export interface PomProbeAccepted {
   run_id: string;
   status: PomRunStatus;
   started_at: string;

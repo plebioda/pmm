@@ -16,7 +16,14 @@
  */
 
 import { useMemo } from 'react';
-import { Alert, Box, LinearProgress, Stack, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  LinearProgress,
+  Stack,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import {
   MaterialReactTable,
   useMaterialReactTable,
@@ -27,40 +34,35 @@ import { PomHeader } from './components/PomHeader';
 import { SnapshotBar } from './components/SnapshotBar';
 import { StatusBadge } from './components/HealthBadge';
 import { SyncButton } from './components/SyncButton';
+import { Duration, Percent } from './components/Metric';
 import { Unavailable } from './components/Unavailable';
-import { formatDuration } from './format';
 import { toServiceRows, usePomTopology } from './hooks';
 import type { PomServiceRow } from './types';
 
-/** Reading that means "not measured" in the two percentage columns. */
-const UNMEASURED = -1;
+/** A full `mongod` command line is a paragraph; the cell shows it on hover. */
+const TRUNCATED = {
+  display: 'block',
+  maxWidth: 320,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+} as const;
 
 /**
- * Render a percentage, or the reason there is none.
+ * Columns the table carries but does not open with.
  *
- * `-1` is the worker's not-measured sentinel; every other value — including `0` —
- * is a real reading and must render as a number. A falsy check here would report an
- * idle server as unmonitored.
+ * The page's job is to show everything the snapshot stores, which is not the same as
+ * showing it all at once: these five are either constant across a PSMDB estate
+ * (`edition`), internal identifiers, or long enough to push the load columns off
+ * screen. They stay one click away in the column-visibility menu.
  */
-function Percent({ value }: { value: number }) {
-  if (value === UNMEASURED) {
-    return <Unavailable reason="metric_not_collected" />;
-  }
-  return <>{value.toFixed(1)}%</>;
-}
-
-/**
- * Render a duration, or the reason there is none.
- *
- * Null here means the field does not apply to this topology — a router has no oplog —
- * which is a different statement from the percentage columns' `-1`.
- */
-function Duration({ value }: { value: number | null }) {
-  if (value === null || value === undefined) {
-    return <Unavailable reason="not_applicable" />;
-  }
-  return <>{formatDuration(value) || '0s'}</>;
-}
+const HIDDEN_BY_DEFAULT = {
+  service_id: false,
+  service_type: false,
+  edition: false,
+  config_path: false,
+  argv: false,
+};
 
 /** Columns for the flat service table. Grouping keys lead, then identity, then load. */
 function useColumns(): MRT_ColumnDef<PomServiceRow>[] {
@@ -79,6 +81,19 @@ function useColumns(): MRT_ColumnDef<PomServiceRow>[] {
           original.cluster_name ?? <Unavailable reason="not_applicable" />,
       },
       { accessorKey: 'service_name', header: 'Service' },
+      {
+        accessorKey: 'host',
+        header: 'Host',
+        Cell: ({ row: { original } }) =>
+          original.host ?? <Unavailable reason="service_not_observed" />,
+      },
+      {
+        accessorKey: 'replication_set',
+        header: 'Replication set',
+        Cell: ({ row: { original } }) =>
+          // A standalone belongs to no set, which is not a gap in what we saw.
+          original.replication_set ?? <Unavailable reason="not_applicable" />,
+      },
       {
         accessorKey: 'status',
         header: 'Status',
@@ -156,6 +171,48 @@ function useColumns(): MRT_ColumnDef<PomServiceRow>[] {
           <Duration value={original.oplog_window_seconds} />
         ),
       },
+      {
+        accessorKey: 'service_id',
+        header: 'Service ID',
+        Cell: ({ row: { original } }) =>
+          original.service_id ?? <Unavailable reason="service_not_observed" />,
+      },
+      {
+        accessorKey: 'service_type',
+        header: 'Service type',
+        Cell: ({ row: { original } }) =>
+          original.service_type ?? (
+            <Unavailable reason="service_not_observed" />
+          ),
+      },
+      {
+        accessorKey: 'edition',
+        header: 'Edition',
+        Cell: ({ row: { original } }) =>
+          original.edition ?? <Unavailable reason="service_not_observed" />,
+      },
+      {
+        accessorKey: 'config_path',
+        header: 'Config path',
+        // Probe-only, like `installed_version`: its absence says the discovery app
+        // has not run on this host, not that the service is unreachable.
+        Cell: ({ row: { original } }) =>
+          original.config_path ?? <Unavailable reason="metric_not_collected" />,
+      },
+      {
+        accessorKey: 'argv',
+        header: 'Command line',
+        Cell: ({ row: { original } }) =>
+          original.argv ? (
+            <Tooltip title={original.argv}>
+              <Box component="span" sx={TRUNCATED}>
+                {original.argv}
+              </Box>
+            </Tooltip>
+          ) : (
+            <Unavailable reason="metric_not_collected" />
+          ),
+      },
     ],
     []
   );
@@ -190,12 +247,12 @@ function Counts({
 }
 
 /**
- * The estate as one table.
+ * The estate as one table, one row per service.
  *
  * The document is a nested `environments -> clusters -> services` tree, but it renders
  * flat: sorting and filtering are only useful across the whole estate, and the nesting
  * survives as the two leading columns. Grouping is available on them if a reader wants
- * the tree back.
+ * the tree back, and Overview is the same snapshot already read that way.
  */
 export function TopologyPage() {
   const { data, isPending, isError, error } = usePomTopology();
@@ -210,6 +267,7 @@ export function TopologyPage() {
     enableDensityToggle: false,
     initialState: {
       density: 'compact',
+      columnVisibility: HIDDEN_BY_DEFAULT,
       sorting: [
         { id: 'cluster_name', desc: false },
         { id: 'service_name', desc: false },
@@ -233,7 +291,16 @@ export function TopologyPage() {
 
   return (
     <Box>
-      <PomHeader title="PSMDB OpenManager" actions={<SyncButton />} />
+      <PomHeader
+        title="Topology"
+        subtitle={
+          <Typography variant="body2" color="text.secondary">
+            Every monitored MongoDB service, and every field the snapshot stores
+            about it.
+          </Typography>
+        }
+        actions={<SyncButton />}
+      />
       <SnapshotBar envelope={data.snapshot} />
       <Counts
         total={data.summary.services_total}

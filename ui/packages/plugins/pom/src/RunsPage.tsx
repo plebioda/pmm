@@ -19,20 +19,26 @@ import { useMemo } from 'react';
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
   Stack,
   Tooltip,
   Typography,
 } from '@mui/material';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { Table, type MRT_ColumnDef } from '@percona/percona-ui';
-import { usePomRuns } from './hooks';
+import {
+  isProbeConflict,
+  isProbeRunActive,
+  usePomProbeRuns,
+  useTriggerPomProbe,
+} from './probeHooks';
 import { RunStatusBadge } from './components/HealthBadge';
 import { PomHeader } from './components/PomHeader';
-import { SyncButton } from './components/SyncButton';
 import { formatRunDuration, formatTimestamp } from './format';
-import type { PomRun } from './types';
+import type { PomProbeRun } from './types';
 
-const RUN_COLUMNS: MRT_ColumnDef<PomRun>[] = [
+const RUN_COLUMNS: MRT_ColumnDef<PomProbeRun>[] = [
   {
     accessorKey: 'status',
     header: 'Status',
@@ -69,15 +75,15 @@ const RUN_COLUMNS: MRT_ColumnDef<PomRun>[] = [
     ),
   },
   {
-    accessorFn: (row) => row.counts.probes_ok,
-    id: 'probes_ok',
-    header: 'Probed',
+    accessorFn: (row) => row.counts.services_answered,
+    id: 'answered',
+    header: 'Answered',
     Cell: ({ row: { original } }) => (
-      // The diagnostic pair: resolved says the mapping worked, probed says the
-      // node answered. resolved=9 / probed=0 is a healthy mapping and broken
-      // executors — a distinction a single "failed" count would hide.
-      <Tooltip title="Services that returned a usable probe">
-        <Box component="span">{original.counts.probes_ok}</Box>
+      // The diagnostic pair: resolved says the mapping worked, answered says the
+      // node ran the payload. resolved=9 / answered=0 is a healthy mapping and
+      // broken executors — a distinction a single "failed" count would hide.
+      <Tooltip title="Services whose node ran the probe payload">
+        <Box component="span">{original.counts.services_answered}</Box>
       </Tooltip>
     ),
   },
@@ -92,48 +98,87 @@ const RUN_COLUMNS: MRT_ColumnDef<PomRun>[] = [
     ),
   },
   {
-    accessorFn: (row) => row.errors.length,
-    id: 'errors',
-    header: 'Errors',
-    Cell: ({ row: { original } }) => original.errors.length || '—',
+    accessorKey: 'facts_collected',
+    header: 'Facts',
+    Cell: ({ row: { original } }) => (
+      <Tooltip title="On-host facts stored by this sweep, merged into the topology document">
+        <Box component="span">{original.facts_collected}</Box>
+      </Tooltip>
+    ),
   },
 ];
 
-/** Per-run errors, shown when a run row is expanded. */
-function RunErrors({ run }: { run: PomRun }) {
-  if (!run.errors.length) {
+/** The sweep's own failure detail, shown when a run row is expanded. */
+function RunError({ run }: { run: PomProbeRun }) {
+  if (!run.error) {
     return (
       <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-        No errors recorded for this run.
+        No error recorded for this sweep.
       </Typography>
     );
   }
   return (
-    <Stack gap={1} sx={{ p: 2 }}>
-      {run.errors.map((error, index) => (
-        <Alert
-          key={`${error.code}-${error.service_name ?? index}`}
-          severity="warning"
-          variant="outlined"
-        >
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {error.service_name ?? error.scope} · {error.code}
-          </Typography>
-          <Typography variant="body2">{error.message}</Typography>
-        </Alert>
-      ))}
+    <Alert severity="warning" variant="outlined" sx={{ m: 2 }}>
+      <Typography variant="body2">{run.error}</Typography>
+    </Alert>
+  );
+}
+
+/**
+ * Trigger a probe sweep and reflect its progress.
+ *
+ * Separate from `SyncButton`, which rebuilds pmm-managed's topology document in a
+ * tenth of a second. This queues work on database hosts that takes tens of seconds,
+ * so the app answers `202` and the list below polls until it lands.
+ */
+function RunProbeButton() {
+  const { data: runs } = usePomProbeRuns();
+  const trigger = useTriggerPomProbe();
+  const running = isProbeRunActive(runs?.[0]?.status);
+  const conflict = isProbeConflict(trigger.error);
+  const failure = trigger.error && !conflict ? trigger.error : null;
+
+  return (
+    <Stack direction="row" alignItems="center" gap={1}>
+      <Tooltip title="Probe every database host and collect the facts no metric carries">
+        <span>
+          <Button
+            variant="contained"
+            startIcon={
+              running ? <CircularProgress size={16} /> : <PlayArrowIcon />
+            }
+            disabled={running || trigger.isPending}
+            onClick={() => trigger.mutate()}
+          >
+            {running ? 'Running…' : 'Run discovery'}
+          </Button>
+        </span>
+      </Tooltip>
+      {conflict && (
+        <Typography variant="body2" color="text.secondary">
+          A sweep is already in flight.
+        </Typography>
+      )}
+      {failure && (
+        <Typography variant="body2" color="error">
+          Could not start a sweep: {failure.message}
+        </Typography>
+      )}
     </Stack>
   );
 }
 
 /**
- * Discovery run history.
+ * The `pom_discovery` sweep history.
  *
- * The list polls itself while the newest run is active (see `usePomRuns`), which
- * is what makes the Sync button's progress visible here without extra wiring.
+ * These are SEP's runs, not pmm-managed's: a sweep runs a payload on every database
+ * host over Nomad and stores the on-host facts — installed version, config path,
+ * command line — that pmm-managed then merges into the topology document. The list
+ * polls itself while the newest sweep is active, which is what makes the trigger
+ * button's progress visible here without extra wiring.
  */
 export function RunsPage() {
-  const { data: runs, isLoading, error } = usePomRuns();
+  const { data: runs, isLoading, error } = usePomProbeRuns();
   const rows = useMemo(() => runs ?? [], [runs]);
 
   return (
@@ -142,16 +187,18 @@ export function RunsPage() {
         title="Discovery"
         subtitle={
           <Typography variant="body2" color="text.secondary">
-            Every run probes each MongoDB service and rebuilds the snapshot the
-            overview reads.
+            Every sweep probes each database host for the facts no metric
+            carries, and POM merges them into the topology.
           </Typography>
         }
-        actions={<SyncButton />}
+        actions={<RunProbeButton />}
       />
 
       {error && (
         <Alert severity="error">
-          Could not load runs: {(error as Error).message}
+          {/* SEP owns this half of POM, so its being unreachable is the answer
+              here rather than an empty table. */}
+          Could not load sweeps from SEP: {(error as Error).message}
         </Alert>
       )}
 
@@ -161,7 +208,7 @@ export function RunsPage() {
         </Box>
       ) : (
         <Table
-          tableName="pom-runs"
+          tableName="pom-probe-runs"
           columns={RUN_COLUMNS}
           data={rows}
           getRowId={(row) => row.run_id}
@@ -171,7 +218,7 @@ export function RunsPage() {
           enablePagination={false}
           enableStickyHeader
           enableExpanding
-          renderDetailPanel={({ row }) => <RunErrors run={row.original} />}
+          renderDetailPanel={({ row }) => <RunError run={row.original} />}
         />
       )}
     </Stack>

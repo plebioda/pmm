@@ -17,15 +17,26 @@
 
 export { PomApp } from './PomApp';
 export { pomBase, usePomBase } from './usePomBase';
+export { OverviewPage } from './OverviewPage';
 export { TopologyPage } from './TopologyPage';
 export { RunsPage } from './RunsPage';
 export { StatusBadge, RunStatusBadge } from './components/HealthBadge';
+export { Duration, Percent } from './components/Metric';
 export { SnapshotBar } from './components/SnapshotBar';
 export { SyncButton } from './components/SyncButton';
 export { PomHeader } from './components/PomHeader';
 export { Unavailable } from './components/Unavailable';
 export {
+  isProbeConflict,
+  isProbeRunActive,
+  usePomProbeRuns,
+  useTriggerPomProbe,
+  POM_PROBE_RUNS_LIMIT,
+} from './probeHooks';
+export {
   usePomTopology,
+  toClusterRows,
+  toEnvironmentSections,
   toServiceRows,
   usePomRuns,
   usePomRun,
@@ -35,6 +46,9 @@ export {
   POM_RUNS_LIMIT,
 } from './hooks';
 export {
+  POM_ROUTE_OVERVIEW,
+  POM_ROUTE_TOPOLOGY,
+  POM_ROUTE_RUNS,
   SERVICE_STATUS_LABEL,
   SERVICE_STATUS_COLOR,
   PROCESS_ROLE_LABEL,
@@ -50,7 +64,12 @@ export {
 } from './format';
 export type {
   PomCluster,
+  PomClusterRow,
   PomEnvironment,
+  PomEnvironmentSection,
+  PomProbeAccepted,
+  PomProbeCounts,
+  PomProbeRun,
   PomProcessRole,
   PomRun,
   PomRunAccepted,

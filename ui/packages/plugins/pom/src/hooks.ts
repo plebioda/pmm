@@ -42,6 +42,10 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import type {
+  PomCluster,
+  PomClusterRow,
+  PomEnvironmentSection,
+  PomProcessRole,
   PomServiceRow,
   PomTopologyResponse,
   PomRun,
@@ -140,6 +144,121 @@ export function toServiceRows(
       }))
     )
   );
+}
+
+/**
+ * Roll one cluster up into a row, keeping its services for the unfolded view.
+ *
+ * The two duration fields take opposite ends on purpose. Lag is a problem at its
+ * worst member, so the cluster's number is the maximum; an oplog window is a budget
+ * that runs out at its tightest member, so the cluster's number is the minimum.
+ * Services that report neither -- routers, standalones, anything unobserved -- are
+ * skipped rather than counted as zero, and a cluster where nobody reports keeps null.
+ */
+function rollUpCluster(
+  cluster: PomCluster,
+  envName: string | null
+): PomClusterRow {
+  const byProcessRole: Partial<Record<PomProcessRole, number>> = {};
+  const byState: Record<string, number> = {};
+  const versions = new Set<string>();
+  let maxLag: number | null = null;
+  let minWindow: number | null = null;
+
+  for (const service of cluster.services) {
+    byProcessRole[service.process_role] =
+      (byProcessRole[service.process_role] ?? 0) + 1;
+    if (service.state) {
+      byState[service.state] = (byState[service.state] ?? 0) + 1;
+    }
+    if (service.version) {
+      versions.add(service.version);
+    }
+    if (service.replication_lag_seconds != null) {
+      maxLag =
+        maxLag == null
+          ? service.replication_lag_seconds
+          : Math.max(maxLag, service.replication_lag_seconds);
+    }
+    if (service.oplog_window_seconds != null) {
+      minWindow =
+        minWindow == null
+          ? service.oplog_window_seconds
+          : Math.min(minWindow, service.oplog_window_seconds);
+    }
+  }
+
+  return {
+    env_name: envName,
+    cluster_name: cluster.name,
+    services: cluster.services,
+    services_total: cluster.services.length,
+    services_up: cluster.services.filter((service) => service.status === 'UP')
+      .length,
+    services_down: cluster.services.filter(
+      (service) => service.status === 'DOWN'
+    ).length,
+    by_process_role: byProcessRole,
+    by_state: byState,
+    versions: [...versions].sort(),
+    max_replication_lag_seconds: maxLag,
+    min_oplog_window_seconds: minWindow,
+  };
+}
+
+/**
+ * Roll the tree up to one row per cluster, keeping its environment.
+ *
+ * Derived rather than fetched: the API serves the estate as one document, so the
+ * overview and the topology table are two readings of the same snapshot. A separate
+ * summary endpoint would let them drift apart between requests for no gain.
+ */
+export function toClusterRows(
+  topology: PomTopologyResponse | undefined
+): PomClusterRow[] {
+  if (!topology) {
+    return [];
+  }
+  return topology.environments.flatMap((environment) =>
+    environment.clusters.map((cluster) =>
+      rollUpCluster(cluster, environment.env_name)
+    )
+  );
+}
+
+/**
+ * The same roll-up kept under its environment, one section per table.
+ *
+ * The per-environment counts are summed from the cluster rows rather than read off
+ * `summary`, which is fleet-wide and has no per-environment breakdown to read.
+ */
+export function toEnvironmentSections(
+  topology: PomTopologyResponse | undefined
+): PomEnvironmentSection[] {
+  if (!topology) {
+    return [];
+  }
+  return topology.environments.map((environment) => {
+    const clusters = environment.clusters.map((cluster) =>
+      rollUpCluster(cluster, environment.env_name)
+    );
+    return {
+      env_name: environment.env_name,
+      clusters,
+      services_total: clusters.reduce(
+        (total, cluster) => total + cluster.services_total,
+        0
+      ),
+      services_up: clusters.reduce(
+        (total, cluster) => total + cluster.services_up,
+        0
+      ),
+      services_down: clusters.reduce(
+        (total, cluster) => total + cluster.services_down,
+        0
+      ),
+    };
+  });
 }
 
 /**

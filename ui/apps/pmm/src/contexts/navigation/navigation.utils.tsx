@@ -338,9 +338,12 @@ export const addPom = (): NavItem[] => [
         id: 'pom-overview',
         text: 'Overview',
         url: POM_PATH,
-        // A cluster opens below the overview, so keep the parent entry selected
-        // while a detail page is showing.
-        matches: [`${POM_PATH}/clusters/*`],
+      },
+      {
+        id: 'pom-topology',
+        text: 'Topology',
+        url: `${POM_PATH}/topology`,
+        matches: [`${POM_PATH}/topology`],
       },
       {
         id: 'pom-discovery',

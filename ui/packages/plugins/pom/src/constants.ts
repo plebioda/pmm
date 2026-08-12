@@ -23,8 +23,9 @@ import type {
   PomUnavailableReason,
 } from './types';
 
-/** Base path of POM's read API under SEP's `/api` prefix. */
-export const POM_ROUTE_TOPOLOGY = '';
+/** POM's own routes, relative to wherever the shell mounts the plugin. */
+export const POM_ROUTE_OVERVIEW = '';
+export const POM_ROUTE_TOPOLOGY = 'topology';
 export const POM_ROUTE_RUNS = 'runs';
 
 export const SERVICE_STATUS_LABEL: Record<PomServiceStatus, string> = {
