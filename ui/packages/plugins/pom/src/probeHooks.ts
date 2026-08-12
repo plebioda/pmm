@@ -38,7 +38,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, apiClient } from '@sep/api';
-import type { PomProbeAccepted, PomProbeRun } from './types';
+import type { PomProbeAccepted, PomProbeRun, PomProbeRunDetail } from './types';
 
 /** The app's mount under `@sep/api`'s `/api` base URL. */
 const PROBE_BASE = '/apps/pom_discovery';
@@ -75,6 +75,28 @@ export function usePomProbeRuns(limit: number = POM_PROBE_RUNS_LIMIT) {
     },
     refetchInterval: (query) =>
       isProbeRunActive(query.state.data?.[0]?.status) ? PROBE_POLL_MS : false,
+  });
+}
+
+/**
+ * One sweep in full: its per-service records and every fact it collected.
+ *
+ * Fetched only when a run is unfolded — `enabled` keeps it off the wire until then —
+ * because this is the payload the list endpoint deliberately does not carry. A
+ * finished sweep never changes, so it is cached indefinitely; only a running one is
+ * worth re-reading, and the list's own poll is what surfaces its terminal status.
+ */
+export function usePomProbeRun(runId: string | undefined, enabled = true) {
+  return useQuery<PomProbeRunDetail>({
+    queryKey: [...probeRunsKey, runId],
+    enabled: Boolean(runId) && enabled,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const { data } = await apiClient.get<PomProbeRunDetail>(
+        `${PROBE_BASE}/runs/${runId}`
+      );
+      return data;
+    },
   });
 }
 

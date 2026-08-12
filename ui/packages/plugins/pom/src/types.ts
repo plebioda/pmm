@@ -258,3 +258,50 @@ export interface PomProbeAccepted {
   status: PomRunStatus;
   started_at: string;
 }
+
+/**
+ * One mapped service, as a sweep saw it.
+ *
+ * The run's counters are this list's summary: "5 of 14 answered" cannot say which
+ * five, on which hosts, or which host took a minute.
+ */
+export interface PomProbeNode {
+  /** PMM's service UUID, or null where SEP's inventory holds none. */
+  service_id: string | null;
+  service_name: string;
+  /** The host the probe ran on; null when the service is orphaned. */
+  executor_host: string | null;
+  /** `name` / `address` / `orphaned` — how that host was matched, or that it was not. */
+  resolution: string;
+  answered: boolean;
+  /**
+   * The host's wall-clock, dispatch to collected output.
+   *
+   * Repeated across the services one host serves, because one dispatch covers all of
+   * them: there is no per-service time to report.
+   */
+  duration_seconds: number | null;
+  facts_collected: number;
+  /** The host-level failure, when its probe failed. */
+  error: string | null;
+}
+
+/** One fact the probe read off a host. */
+export interface PomProbeFact {
+  service_id: string;
+  field: string;
+  value: unknown;
+  observed_at: string;
+}
+
+/**
+ * One sweep in full, from `GET /runs/{id}`.
+ *
+ * The list endpoint omits `nodes` and `facts` — a sweep's facts run to a few hundred
+ * records, and a 25-run history carrying all of them would be an order of magnitude
+ * larger to serve a page that shows one run at a time.
+ */
+export interface PomProbeRunDetail extends PomProbeRun {
+  nodes: PomProbeNode[];
+  facts: PomProbeFact[];
+}

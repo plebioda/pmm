@@ -34,6 +34,7 @@ import {
   useTriggerPomProbe,
 } from './probeHooks';
 import { RunStatusBadge } from './components/HealthBadge';
+import { RunNodes } from './components/RunNodes';
 import { PomHeader } from './components/PomHeader';
 import { formatRunDuration, formatTimestamp } from './format';
 import type { PomProbeRun } from './types';
@@ -107,22 +108,6 @@ const RUN_COLUMNS: MRT_ColumnDef<PomProbeRun>[] = [
     ),
   },
 ];
-
-/** The sweep's own failure detail, shown when a run row is expanded. */
-function RunError({ run }: { run: PomProbeRun }) {
-  if (!run.error) {
-    return (
-      <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-        No error recorded for this sweep.
-      </Typography>
-    );
-  }
-  return (
-    <Alert severity="warning" variant="outlined" sx={{ m: 2 }}>
-      <Typography variant="body2">{run.error}</Typography>
-    </Alert>
-  );
-}
 
 /**
  * Trigger a probe sweep and reflect its progress.
@@ -218,7 +203,7 @@ export function RunsPage() {
           enablePagination={false}
           enableStickyHeader
           enableExpanding
-          renderDetailPanel={({ row }) => <RunError run={row.original} />}
+          renderDetailPanel={({ row }) => <RunNodes run={row.original} />}
         />
       )}
     </Stack>

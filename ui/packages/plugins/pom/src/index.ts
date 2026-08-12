@@ -22,6 +22,7 @@ export { TopologyPage } from './TopologyPage';
 export { RunsPage } from './RunsPage';
 export { StatusBadge, RunStatusBadge } from './components/HealthBadge';
 export { Duration, Percent } from './components/Metric';
+export { RunNodes } from './components/RunNodes';
 export { SnapshotBar } from './components/SnapshotBar';
 export { SyncButton } from './components/SyncButton';
 export { PomHeader } from './components/PomHeader';
@@ -29,6 +30,7 @@ export { Unavailable } from './components/Unavailable';
 export {
   isProbeConflict,
   isProbeRunActive,
+  usePomProbeRun,
   usePomProbeRuns,
   useTriggerPomProbe,
   POM_PROBE_RUNS_LIMIT,
@@ -69,7 +71,10 @@ export type {
   PomEnvironmentSection,
   PomProbeAccepted,
   PomProbeCounts,
+  PomProbeFact,
+  PomProbeNode,
   PomProbeRun,
+  PomProbeRunDetail,
   PomProcessRole,
   PomRun,
   PomRunAccepted,
