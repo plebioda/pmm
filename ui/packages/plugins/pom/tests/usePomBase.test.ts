@@ -35,6 +35,10 @@ describe('pomBase', () => {
     expect(pomBase(`${MOUNT}/runs`)).toBe(MOUNT);
   });
 
+  it('strips the topology segment so the Overview link resolves to the mount', () => {
+    expect(pomBase(`${MOUNT}/topology`)).toBe(MOUNT);
+  });
+
   it('strips a cluster detail segment so the breadcrumb links back', () => {
     expect(pomBase(`${MOUNT}/clusters/cl_8087e8bb`)).toBe(MOUNT);
   });

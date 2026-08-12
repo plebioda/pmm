@@ -18,7 +18,7 @@
 import { useLocation } from 'react-router-dom';
 
 /** The child routes `PomApp` declares, as patterns to strip off the mount path. */
-const CHILD_PATTERNS = [/\/runs$/, /\/clusters\/[^/]+$/];
+const CHILD_PATTERNS = [/\/topology$/, /\/runs$/, /\/clusters\/[^/]+$/];
 
 /**
  * Recover POM's mount path from the current location.

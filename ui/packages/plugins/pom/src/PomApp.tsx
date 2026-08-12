@@ -16,21 +16,26 @@
  */
 
 import { Route, Routes } from 'react-router-dom';
+import { OverviewPage } from './OverviewPage';
 import { TopologyPage } from './TopologyPage';
-import { RunsPage } from './RunsPage';
 
 /**
- * POM app router. The shell mounts this at ``sep/pom/*``; the topology table is the
- * index route and the discovery history lives at ``runs``.
+ * POM app router. The shell mounts this at ``pom/*``; the cluster overview is the
+ * index route and the full service table lives at ``topology``.
  *
- * There is no per-cluster route: the snapshot is one document and the table renders
- * all of it, so a detail page would only re-show rows the reader already has.
+ * ``runs`` is deliberately absent. Discovery reads SEP's ``pom_discovery`` app
+ * directly, so it needs a SEP bearer that the rest of POM does not: the shell mounts
+ * ``RunsPage`` on its own route inside ``SepPage``, which ranks above this splat.
+ * Mounting it here as well would put an ungated copy on the same path.
+ *
+ * There is no per-cluster route: the snapshot is one document and the topology table
+ * renders all of it, so a detail page would only re-show rows the reader already has.
  */
 export function PomApp() {
   return (
     <Routes>
-      <Route index element={<TopologyPage />} />
-      <Route path="runs" element={<RunsPage />} />
+      <Route index element={<OverviewPage />} />
+      <Route path="topology" element={<TopologyPage />} />
     </Routes>
   );
 }
