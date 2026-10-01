@@ -725,6 +725,71 @@ func (s *Service) inventoryHostsByExecutor(ctx context.Context) (map[string]exte
 	return byExecutor, nil
 }
 
+// inventorySyncAppModule is where PMM Extensions mounts the app PMMSyncer
+// belongs to -- a different module from probeAppModule, reached through the same
+// client and the same `/api/apps/<module>` convention.
+const inventorySyncAppModule = "inventory"
+
+// pmmSyncerName is the one syncer triggerInventorySync asks for by name. Syncing
+// only PMMSyncer rather than every configured syncer keeps an unrelated source's
+// cost off a path that runs when a bootstrap finishes.
+const pmmSyncerName = "app.extensions.sync.syncers.pmm.PMMSyncer"
+
+// inventorySyncDebounce is how often triggerInventorySync will actually ask.
+//
+// The sync is global, not per-run, so one pull serves every run that finished in
+// the same window -- and completeSucceededRun reaches this on every 15s tick for
+// as long as refreshRetryWindowOpen holds a run, which would otherwise be twenty
+// full inventory pulls for one bootstrap.
+const inventorySyncDebounce = 45 * time.Second
+
+// triggerInventorySync asks PMM Extensions to pull PMM's current services into
+// its own inventory now, instead of waiting for PMMSyncer's schedule.
+//
+// This is the step that was missing between registering a bootstrapped host and
+// re-probing it. registerBootstrapHost creates the service in *PMM's* inventory;
+// the estate's probe resolves a host's services from *PMM Extensions'* copy, which
+// only PMMSyncer fills. So triggerScopedInventoryRefresh on its own re-probes a
+// host whose service the app has not heard of yet, and finds nothing -- by
+// construction, since it fires the moment registration completes.
+//
+// Observed on a real deployment: two runs finished at 08:40:31 and 08:41:31, each
+// fired its scoped refresh at exactly that second, and both found no service.
+// confirm_monitoring stayed "running" until the app's own 10-minute sweep at
+// 08:50:58, so a pair of entirely successful bootstraps read as hung for nine
+// minutes.
+//
+// Reports whether the app took the request. A debounced skip reports true: the
+// pull it would have asked for is already on its way, which is what the caller
+// needs to know.
+func (s *Service) triggerInventorySync(ctx context.Context) bool {
+	probe, err := s.inventoryProbe()
+	if err != nil {
+		return false
+	}
+
+	s.syncRequestedMu.Lock()
+	if time.Since(s.syncRequested) < inventorySyncDebounce {
+		s.syncRequestedMu.Unlock()
+		return true
+	}
+	s.syncRequested = time.Now()
+	s.syncRequestedMu.Unlock()
+
+	// Trailing slash: the app answers 307 without it, and a redirect is refused
+	// rather than followed so the bearer is never replayed (see refuseRedirect).
+	call := inventoryCall{
+		method: http.MethodPost,
+		path:   "sync/",
+		body:   map[string]any{"syncer": pmmSyncerName},
+	}
+	if err := probe.client.app(inventorySyncAppModule).call(ctx, call, nil); err != nil {
+		s.l.Warnf("failed to trigger an inventory sync after a bootstrap: %s", err)
+		return false
+	}
+	return true
+}
+
 // triggerScopedInventoryRefresh asks the inventory app to re-probe exactly
 // nodeIDs now, rather than leaving confirmMonitoringStep to wait out however
 // long the app's own schedule takes to get there on its own -- called by

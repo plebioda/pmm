@@ -73,10 +73,95 @@ func TestCompleteSucceededRun(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, services, 1, "node01 should still be registered")
 
-		require.Len(t, stub.calls, 2)
+		require.Len(t, stub.calls, 3)
 		assert.Equal(t, "/api/apps/om_inventory/hosts", stub.calls[0].path)
-		assert.Equal(t, "/api/apps/om_inventory/runs", stub.calls[1].path)
-		assert.JSONEq(t, `{"node_ids": ["`+node01+`"]}`, stub.calls[1].body)
+		// The sync comes between reading the estate and re-probing it: the
+		// service was just created in PMM, and the probe resolves services from
+		// the app's own copy, which only PMMSyncer fills.
+		assert.Equal(t, "/api/apps/inventory/sync/", stub.calls[1].path)
+		assert.JSONEq(t, `{"syncer": "`+pmmSyncerName+`"}`, stub.calls[1].body)
+		assert.Equal(t, "/api/apps/om_inventory/runs", stub.calls[2].path)
+		assert.JSONEq(t, `{"node_ids": ["`+node01+`"]}`, stub.calls[2].body)
+	})
+
+	t.Run("keeps an unconfirmed run in the sweep even when both nudges were accepted", func(t *testing.T) {
+		// The regression this pins, and the reason the hold is on the estate's
+		// answer rather than on whether the requests were taken.
+		//
+		// The sync answers 202 and finishes in the background, so the probe
+		// fired straight after it can easily run before the service it is
+		// looking for arrives. Measured on a real deployment: two runs finished
+		// at 08:40:31 and 08:41:31, each nudged at exactly that second, both
+		// found nothing, and confirm_monitoring read "running" until the app's
+		// own 10-minute sweep at 08:50:58 - nine minutes of a wholly successful
+		// bootstrap looking hung. Treating "both calls accepted" as done is what
+		// let the run leave the sweep before the data it was waiting for existed.
+		db := storeTestDB(t)
+		node00, _ := registerTestNode(t, db, "node00")
+		require.NoError(t, models.CreateOmBootstrapSecret(db.Querier, &models.OmBootstrapSecret{
+			RunID:           "run-abc",
+			MongoDBUsername: "admin",
+			MongoDBPassword: "secret",
+			KeyFile:         "keyfile-content",
+		}))
+
+		// Every call succeeds; the estate simply has no service yet.
+		stub := newSEPStub(t, http.StatusOK,
+			fmt.Sprintf(`{"items": [{"node_id": %q, "executor_host": "node00", "services": []}], "total": 1, "offset": 0, "limit": 200}`, node00))
+		svc := (&Service{db: db, l: logrus.WithField("test", t.Name())}).
+			WithProbeSource(stub.server.URL, "test-token")
+
+		finished := time.Now()
+		svc.completeSucceededRun(t.Context(), &extensionsBootstrapRun{
+			ID:             "run-abc",
+			Status:         bootstrapRunSucceeded,
+			ReplicaSetName: "rs-test",
+			FinishedAt:     &finished,
+			Hosts:          []extensionsBootstrapHost{{Host: "node00"}},
+		})
+
+		registered, err := models.FindRegisteredOmBootstrapRunIDs(db.Querier)
+		require.NoError(t, err)
+		assert.NotContains(t, registered, "run-abc",
+			"an accepted sync and refresh do not mean the host is confirmed; the run must stay for the next tick")
+	})
+
+	t.Run("debounces the sync, so one bootstrap does not cause a pull per tick", func(t *testing.T) {
+		// completeSucceededRun is reached every 15s for as long as
+		// refreshRetryWindowOpen holds a run, and the sync is global rather than
+		// per-run, so one pull serves every run finishing together.
+		db := storeTestDB(t)
+		node00, _ := registerTestNode(t, db, "node00")
+		require.NoError(t, models.CreateOmBootstrapSecret(db.Querier, &models.OmBootstrapSecret{
+			RunID:           "run-abc",
+			MongoDBUsername: "admin",
+			MongoDBPassword: "secret",
+			KeyFile:         "keyfile-content",
+		}))
+
+		stub := newSEPStub(t, http.StatusOK,
+			fmt.Sprintf(`{"items": [{"node_id": %q, "executor_host": "node00", "services": []}], "total": 1, "offset": 0, "limit": 200}`, node00))
+		svc := (&Service{db: db, l: logrus.WithField("test", t.Name())}).
+			WithProbeSource(stub.server.URL, "test-token")
+
+		finished := time.Now()
+		run := &extensionsBootstrapRun{
+			ID:             "run-abc",
+			Status:         bootstrapRunSucceeded,
+			ReplicaSetName: "rs-test",
+			FinishedAt:     &finished,
+			Hosts:          []extensionsBootstrapHost{{Host: "node00"}},
+		}
+		svc.completeSucceededRun(t.Context(), run)
+		svc.completeSucceededRun(t.Context(), run)
+
+		syncs := 0
+		for _, c := range stub.calls {
+			if c.path == "/api/apps/inventory/sync/" {
+				syncs++
+			}
+		}
+		assert.Equal(t, 1, syncs, "the second tick must reuse the pull already in flight")
 	})
 
 	t.Run("triggers no refresh once the inventory app has confirmed every host", func(t *testing.T) {
@@ -209,12 +294,13 @@ func TestCompleteSucceededRun(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, services, 1, "the refusal must not cost the registration it follows")
 
-		require.Len(t, stub.calls, 2)
-		assert.Equal(t, "/api/apps/om_inventory/runs", stub.calls[1].path)
+		require.Len(t, stub.calls, 3)
+		assert.Equal(t, "/api/apps/inventory/sync/", stub.calls[1].path)
+		assert.Equal(t, "/api/apps/om_inventory/runs", stub.calls[2].path)
 
 		registered, err := models.FindRegisteredOmBootstrapRunIDs(db.Querier)
 		require.NoError(t, err)
-		assert.NotContains(t, registered, "run-abc", "a refused nudge has to be retried, so the run stays in the sweep")
+		assert.NotContains(t, registered, "run-abc", "an unconfirmed host has to be looked at again, so the run stays in the sweep")
 	})
 
 	t.Run("gives up on the refresh once the run is too old, rather than sweeping it forever", func(t *testing.T) {

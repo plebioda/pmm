@@ -328,9 +328,14 @@ func (s *Service) completeSucceededRun(ctx context.Context, run *extensionsBoots
 		}
 	}
 
-	refreshed := true
 	if len(unconfirmed) > 0 {
-		refreshed = s.triggerScopedInventoryRefresh(ctx, unconfirmed)
+		// Sync first, then re-probe. The service these hosts are waiting to be
+		// confirmed by was created in PMM's inventory a few lines up; the probe
+		// resolves services from PMM Extensions' own copy, which only PMMSyncer
+		// fills. Refreshing without syncing re-probes a host whose service the
+		// app has not heard of yet -- see triggerInventorySync.
+		s.triggerInventorySync(ctx)
+		s.triggerScopedInventoryRefresh(ctx, unconfirmed)
 	}
 
 	if done < len(run.Hosts) {
@@ -338,11 +343,19 @@ func (s *Service) completeSucceededRun(ctx context.Context, run *extensionsBoots
 		// idempotent, so the next tick picks up only what is left.
 		return
 	}
-	if !refreshed && refreshRetryWindowOpen(run, time.Now()) {
-		// Registration is already complete; what is left is the nudge, and the
-		// run has to stay in the sweep to get another go at it. Nothing else
-		// would: marking it registered here is what takes it out for good, so
-		// "ask again next tick" is only true while this branch holds it.
+	if len(unconfirmed) > 0 && refreshRetryWindowOpen(run, time.Now()) {
+		// Registration is already complete; what is left is confirmation, and
+		// the run has to stay in the sweep to get it. Nothing else would:
+		// marking it registered here is what takes it out for good, so "look
+		// again next tick" is only true while this branch holds it.
+		//
+		// Held on the estate still lacking a service rather than on whether the
+		// nudge was accepted. Both requests can be taken and still leave the
+		// host unconfirmed -- the sync answers 202 and completes in the
+		// background, so the probe this tick can easily run before the service
+		// it is looking for arrives. Holding on the outcome instead lets the
+		// next tick see the synced service and finish, which is what turns a
+		// nine-minute wait into one that ends as soon as the data is there.
 		return
 	}
 	// The last thing PMM owed this run is done, so it leaves the sweep: see
