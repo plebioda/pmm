@@ -41,7 +41,7 @@ import {
   HOST_DATABASE_STATE_COLOR,
   HOST_DATABASE_STATE_LABEL,
   HOST_DATABASE_STATE_PHRASE,
-  OM_ROUTE_BOOTSTRAP,
+  OM_ROUTE_INSTALL,
 } from './constants';
 import { OmHeader } from './components/OmHeader';
 import { Unavailable } from './components/Unavailable';
@@ -566,7 +566,7 @@ const ForgetDialog = ({
  * where a database can be installed, and it has no service to be discovered through,
  * which is why the estate keys hosts separately at all.
  */
-export const HostsPage = () => {
+export const NodesPage = () => {
   const { data, isPending, isError, error } = useOmInventoryHosts();
   const refresh = useRefreshInventory();
   // Any active run, matching InventoryPage's button: firing an estate-wide sweep into
@@ -692,7 +692,7 @@ export const HostsPage = () => {
               }
               onClick={() =>
                 navigate(
-                  `${omBase}/${OM_ROUTE_BOOTSTRAP}?hosts=${row.original.node_id}`
+                  `${omBase}/${OM_ROUTE_INSTALL}?hosts=${row.original.node_id}`
                 )
               }
             >
@@ -850,7 +850,7 @@ export const HostsPage = () => {
                 }
                 onClick={() =>
                   navigate(
-                    `${omBase}/${OM_ROUTE_BOOTSTRAP}?hosts=${selectedRows
+                    `${omBase}/${OM_ROUTE_INSTALL}?hosts=${selectedRows
                       .map((row) => row.node_id)
                       .join(',')}`
                   )

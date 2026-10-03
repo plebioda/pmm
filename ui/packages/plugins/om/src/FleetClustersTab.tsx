@@ -44,10 +44,8 @@ import {
   PROCESS_ROLE_LABEL,
   type OmMemberBadge,
 } from './constants';
-import { OmHeader } from './components/OmHeader';
 import { SnapshotBar } from './components/SnapshotBar';
 import { StatusBadge } from './components/HealthBadge';
-import { SyncButton } from './components/SyncButton';
 import { Duration, Percent } from './components/Metric';
 import { Unavailable } from './components/Unavailable';
 import { useOmTopology } from './topologyHooks';
@@ -430,7 +428,7 @@ const Counts = ({
  * row per service and every field it carries, for anyone who needs to sort or filter
  * across the estate rather than read it by environment.
  */
-export const OverviewPage = () => {
+export const FleetClustersTab = () => {
   const { data, isPending, isError, error } = useOmTopology();
   const sections = useMemo(() => toEnvironmentSections(data), [data]);
 
@@ -445,37 +443,15 @@ export const OverviewPage = () => {
     // one: Overview is the index route, so a fresh install lands here first, and an
     // alert on its own named the fix without offering it.
     return (
-      <Stack gap={1}>
-        <OmHeader
-          title="Operations for MongoDB"
-          subtitle={
-            <Typography variant="body2" color="text.secondary">
-              Every monitored MongoDB cluster, one table per environment. Unfold
-              a cluster to see its services.
-            </Typography>
-          }
-          actions={<SyncButton />}
-        />
-        <Alert severity="error">
-          {(error as Error)?.message ?? 'Could not load the topology.'}
-        </Alert>
-      </Stack>
+      <Alert severity="error">
+        {(error as Error)?.message ?? 'Could not load the fleet.'}
+      </Alert>
     );
   }
 
   return (
     <Stack gap={3}>
       <Stack gap={1}>
-        <OmHeader
-          title="Operations for MongoDB"
-          subtitle={
-            <Typography variant="body2" color="text.secondary">
-              Every monitored MongoDB cluster, one table per environment. Unfold
-              a cluster to see its services.
-            </Typography>
-          }
-          actions={<SyncButton />}
-        />
         <SnapshotBar envelope={data.snapshot} />
         <Counts
           environments={data.summary.environments}

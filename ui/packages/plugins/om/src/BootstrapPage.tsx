@@ -39,7 +39,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { OM_ROUTE_AUTOMATIONS, OM_ROUTE_HOSTS } from './constants';
+import { OM_ROUTE_AUTOMATIONS, OM_ROUTE_NODES } from './constants';
 import { OmHeader } from './components/OmHeader';
 import { toHostRows } from './inventory';
 import { useOmInventoryHosts, useTriggerHostBootstrap } from './inventoryHooks';
@@ -311,7 +311,7 @@ export const BootstrapPage = () => {
     [hostsQuery.data, selectedIds]
   );
 
-  const backToHosts = () => navigate(`${omBase}/${OM_ROUTE_HOSTS}`);
+  const backToHosts = () => navigate(`${omBase}/${OM_ROUTE_NODES}`);
 
   const [activeStep, setActiveStep] = useState(0);
   const [configTab, setConfigTab] = useState<'general' | 'security'>('general');
