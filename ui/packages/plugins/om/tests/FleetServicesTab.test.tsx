@@ -15,10 +15,10 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
-import { ServicesPage } from '../src/ServicesPage';
+import { FleetServicesTab } from '../src/FleetServicesTab';
 import { mixedEstate } from './fixtures';
 
 vi.mock('../src/topologyHooks', () => ({
@@ -35,13 +35,12 @@ vi.mock('../src/inventoryHooks', () => ({
     isError: false,
   }),
 }));
-vi.mock('../src/components/SyncButton', () => ({ SyncButton: () => null }));
 
-describe('ServicesPage', () => {
+describe('FleetServicesTab', () => {
   it('opens with the down service as the first row', () => {
     render(
       <MemoryRouter>
-        <ServicesPage />
+        <FleetServicesTab />
       </MemoryRouter>
     );
 
@@ -57,13 +56,17 @@ describe('ServicesPage', () => {
   it('labels the process type "Process", never "Role"', () => {
     render(
       <MemoryRouter>
-        <ServicesPage />
+        <FleetServicesTab />
       </MemoryRouter>
     );
 
-    expect(
-      screen.getByRole('columnheader', { name: /Process/ })
-    ).toBeInTheDocument();
+    // The column budget hides Process by default (PMM-15659), so the label is read
+    // where a hidden column is still named: the column chooser.
+    fireEvent.click(screen.getByRole('button', { name: 'Show/Hide columns' }));
+    const chooser = screen.getByRole('menu');
+
+    expect(within(chooser).getByText('Process')).toBeInTheDocument();
+    expect(within(chooser).queryByText(/^Role$/)).toBeNull();
     expect(screen.queryByRole('columnheader', { name: /^Role/ })).toBeNull();
   });
 });

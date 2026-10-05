@@ -31,6 +31,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import { EmptyState } from './components/EmptyState';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   MaterialReactTable,
@@ -38,12 +39,10 @@ import {
   type MRT_ColumnDef,
 } from 'material-react-table';
 import { PROCESS_ROLE_LABEL } from './constants';
-import { OmHeader } from './components/OmHeader';
 import { SnapshotBar } from './components/SnapshotBar';
 import { ClusterHealthBadge, StatusBadge } from './components/HealthBadge';
 import { MemberState } from './components/MemberState';
 import { ServiceLink } from './components/ServiceLink';
-import { SyncButton } from './components/SyncButton';
 import { Duration, Percent } from './components/Metric';
 import { Unavailable } from './components/Unavailable';
 import { useOmTopology } from './topologyHooks';
@@ -401,7 +400,7 @@ const Counts = ({
  * row per service and every field it carries, for anyone who needs to sort or filter
  * across the estate rather than read it by environment.
  */
-export const OverviewPage = () => {
+export const FleetClustersTab = () => {
   const { data, isPending, isError, error } = useOmTopology();
   const sections = useMemo(() => toEnvironmentSections(data), [data]);
 
@@ -410,43 +409,19 @@ export const OverviewPage = () => {
   }
 
   if (isError) {
-    // The header stays, with its Sync action, exactly as ServicesPage does. A 503 here
-    // is the expected first-run state - the API says so when no collection has
-    // completed - and Sync is the way out. It matters more on this page than on that
-    // one: Overview is the index route, so a fresh install lands here first, and an
-    // alert on its own named the fix without offering it.
+    // Just the alert: the header, and the Sync action that is the way out of the
+    // expected first-run 503, belong to FleetPage and render above whichever tab is
+    // open. This tab is the index route, so a fresh install lands here first.
     return (
-      <Stack gap={1}>
-        <OmHeader
-          title="OpenManager"
-          subtitle={
-            <Typography variant="body2" color="text.secondary">
-              Every monitored MongoDB cluster, one table per environment. Unfold
-              a cluster to see its services.
-            </Typography>
-          }
-          actions={<SyncButton />}
-        />
-        <Alert severity="error">
-          {(error as Error)?.message ?? 'Could not load the topology.'}
-        </Alert>
-      </Stack>
+      <Alert severity="error">
+        {(error as Error)?.message ?? 'Could not load the fleet.'}
+      </Alert>
     );
   }
 
   return (
     <Stack gap={3}>
       <Stack gap={1}>
-        <OmHeader
-          title="OpenManager"
-          subtitle={
-            <Typography variant="body2" color="text.secondary">
-              Every monitored MongoDB cluster, one table per environment. Unfold
-              a cluster to see its services.
-            </Typography>
-          }
-          actions={<SyncButton />}
-        />
         <SnapshotBar envelope={data.snapshot} />
         <Counts
           environments={data.summary.environments}
@@ -458,9 +433,12 @@ export const OverviewPage = () => {
       </Stack>
 
       {sections.length === 0 ? (
-        <Alert severity="info">
-          The snapshot has no environments. Sync to rebuild it.
-        </Alert>
+        <EmptyState title="No MongoDB clusters yet">
+          This page shows every MongoDB cluster PMM monitors, and the health of
+          each one&apos;s members. It is empty because PMM has no MongoDB
+          services registered yet - add one, and it appears here on the next
+          refresh.
+        </EmptyState>
       ) : (
         // Indexed fallback: two sibling sections with no env_name would otherwise
         // share a React key. Environments carry no server-issued id the way clusters
