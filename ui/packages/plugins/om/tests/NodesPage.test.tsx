@@ -51,6 +51,7 @@ vi.mock('../src/inventoryHooks', () => ({
   useForgetHost,
   useOmBootstrapRuns,
   useActiveInventoryRun,
+  useScanInFlight: () => ({ run: undefined, expectedSeconds: null }),
 }));
 
 const host = (overrides: Partial<OmInventoryHost> = {}): OmInventoryHost => ({
