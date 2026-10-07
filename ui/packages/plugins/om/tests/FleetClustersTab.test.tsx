@@ -18,19 +18,17 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { OverviewPage } from '../src/OverviewPage';
+import { FleetClustersTab } from '../src/FleetClustersTab';
 import { mixedEstate } from './fixtures';
 
 const { useOmTopology } = vi.hoisted(() => ({ useOmTopology: vi.fn() }));
 
 vi.mock('../src/topologyHooks', () => ({ useOmTopology }));
-// The Sync action brings its own queries and is not what these tests are about.
-vi.mock('../src/components/SyncButton', () => ({ SyncButton: () => null }));
 
 const renderPage = () =>
   render(
     <MemoryRouter>
-      <OverviewPage />
+      <FleetClustersTab />
     </MemoryRouter>
   );
 
@@ -39,7 +37,7 @@ const clusterRows = () =>
     .getAllByRole('row')
     .filter((row) => within(row).queryByTestId('om-cluster-health'));
 
-describe('OverviewPage', () => {
+describe('FleetClustersTab', () => {
   beforeEach(() => {
     useOmTopology.mockReturnValue({
       data: mixedEstate(),
