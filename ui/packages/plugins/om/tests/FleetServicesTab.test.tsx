@@ -34,6 +34,7 @@ vi.mock('../src/inventoryHooks', () => ({
     isPending: false,
     isError: false,
   }),
+  useLastScanFinishedAt: () => null,
 }));
 
 describe('FleetServicesTab', () => {
