@@ -17,7 +17,8 @@
 
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { browserTimezone } from '@pmm-extensions/framework';
 import { AutomationsScansTab } from '../src/AutomationsScansTab';
 import type { OmInventoryRun } from '../src/types';
 
@@ -181,5 +182,71 @@ describe('AutomationsScansTab', () => {
     expect(screen.getByTestId('om-error')).toHaveTextContent(
       'The scan failed: PMM Extensions did not answer'
     );
+  });
+
+  describe('timestamps', () => {
+    const NOW = '2026-10-06T12:00:00Z';
+    const RECENT = '2026-10-06T09:00:00Z';
+    const OLD = '2026-09-20T08:30:00Z';
+    const at = (
+      run_id: string,
+      start_time: string,
+      status: OmInventoryRun['status']
+    ): OmInventoryRun => ({
+      ...run(run_id),
+      status,
+      start_time,
+      end_time: start_time.replace(':00Z', ':39Z'),
+    });
+    const hover = (iso: string) =>
+      `${new Date(iso).toLocaleString()} (${browserTimezone()})`;
+    // The last-scan summary carries the same hover, so pick the one inside the table.
+    const startedCell = (iso: string) =>
+      screen
+        .getAllByTitle(hover(iso))
+        .find((el) => el.closest('td')) as HTMLElement;
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(NOW));
+      // Different outcomes, so the history shows them as two rows, not one group.
+      useOmInventoryRuns.mockReturnValue({
+        data: [
+          at('recent', RECENT, 'RUN_STATUS_SUCCESS'),
+          at('old', OLD, 'RUN_STATUS_FAILED'),
+        ],
+        isLoading: false,
+        error: null,
+      });
+      renderAt('/automations?tab=scans');
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('shows a run from this week as relative time, with the zone on hover', () => {
+      const cell = startedCell(RECENT);
+      expect(cell).toHaveTextContent('3 hours ago');
+      expect(cell.closest('td')).toHaveStyle({ whiteSpace: 'nowrap' });
+    });
+
+    it('shows an older run as a local date and time, with the zone on hover', () => {
+      expect(startedCell(OLD)).toHaveTextContent(
+        new Date(OLD).toLocaleString()
+      );
+    });
+
+    it('never renders the old fixed yyyy-MM-dd HH:mm:ss format', () => {
+      expect(
+        screen.queryByText(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)
+      ).toBeNull();
+    });
+
+    it('gives the last scan summary its age and a hover', () => {
+      expect(screen.getByText('3h ago')).toHaveAttribute(
+        'title',
+        hover(RECENT)
+      );
+    });
   });
 });

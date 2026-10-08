@@ -25,6 +25,7 @@ import {
 import { MemoryRouter } from 'react-router-dom';
 import { SnackbarProvider } from 'notistack';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { browserTimezone } from '@pmm-extensions/framework';
 import { OmApiError } from '../src/api';
 import { NodesPage } from '../src/NodesPage';
 import type { OmInventoryHost } from '../src/types';
@@ -798,5 +799,38 @@ describe('NodesPage', () => {
         'MuiButton-contained'
       );
     });
+  });
+
+  it('puts the local collection time and zone on the Collected hover', () => {
+    const collected = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+    renderPage([
+      host({
+        freshness: { consecutive_failures: 0, last_success_at: collected },
+      }),
+    ]);
+
+    expect(within(rowFor('node00')).getByText('3m ago')).toHaveAttribute(
+      'title',
+      `${new Date(collected).toLocaleString()} (${browserTimezone()})`
+    );
+  });
+
+  it("gives a failing node's last collection the local time and zone on hover", () => {
+    const collected = new Date(Date.now() - 40 * 60 * 1000).toISOString();
+    renderPage([
+      host({
+        freshness: {
+          consecutive_failures: 4,
+          last_success_at: collected,
+          failing_since: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
+          last_error: 'ssh: connection refused.',
+        },
+      }),
+    ]);
+
+    expect(within(rowFor('node00')).getByText('40m ago')).toHaveAttribute(
+      'title',
+      `${new Date(collected).toLocaleString()} (${browserTimezone()})`
+    );
   });
 });
