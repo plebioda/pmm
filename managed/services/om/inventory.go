@@ -1778,6 +1778,8 @@ func freshnessToProto(f extensionsFreshness) *omv1.InventoryFreshness {
 		FailingSince:        optionalTimestamp(f.FailingSince),
 		ConsecutiveFailures: clampInt32(f.ConsecutiveFailures),
 		LastError:           optionalString(f.LastError),
+		LastErrorCode:       optionalString(f.LastErrorCode),
+		LastRunId:           optionalString(f.LastRunID),
 	}
 }
 
