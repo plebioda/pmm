@@ -32,7 +32,8 @@ import {
   SERVICE_STATUS_LABEL,
 } from '../constants';
 import { isRunActive } from '../api';
-import { formatCompactDuration, formatTimestamp } from '../format';
+import { formatTimestamp } from '@pmm-extensions/framework';
+import { formatCompactDuration } from '../format';
 import { ageSeconds } from '../inventory';
 import type {
   OmClusterHealth,
@@ -112,7 +113,7 @@ const DownFor = ({ lastUpAt }: { lastUpAt?: string | null }) => {
         ]
       : [
           `for ${formatCompactDuration(age) || '0s'}`,
-          `Last seen up ${formatTimestamp(lastUpAt)}`,
+          `Last seen up ${formatTimestamp(lastUpAt)?.title ?? '—'}`,
         ];
   return (
     <Tooltip title={title} describeChild>
