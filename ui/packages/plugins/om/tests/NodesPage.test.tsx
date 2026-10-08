@@ -35,6 +35,7 @@ const {
   useForgetHost,
   useOmBootstrapRuns,
   useActiveInventoryRun,
+  enqueueSnackbar,
 } = vi.hoisted(() => ({
   useOmInventoryHosts: vi.fn(),
   useRefreshInventory: vi.fn(),
@@ -42,7 +43,10 @@ const {
   useForgetHost: vi.fn(),
   useOmBootstrapRuns: vi.fn(),
   useActiveInventoryRun: vi.fn(),
+  enqueueSnackbar: vi.fn(),
 }));
+
+vi.mock('notistack', () => ({ enqueueSnackbar }));
 
 vi.mock('../src/inventoryHooks', () => ({
   useOmInventoryHosts,
@@ -172,6 +176,11 @@ describe('NodesPage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Forget' }));
 
     await waitFor(() => expect(forgetOne).toHaveBeenCalledWith('node-1'));
+    await waitFor(() =>
+      expect(enqueueSnackbar).toHaveBeenCalledWith('Forgot node00', {
+        variant: 'success',
+      })
+    );
   });
 
   it('closes the dialog without forgetting when cancelled', async () => {

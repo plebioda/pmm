@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { enqueueSnackbar } from 'notistack';
 import {
   Link as RouterLink,
   useNavigate,
@@ -772,6 +773,12 @@ const ForgetDialog = ({
           : []
       );
       if (failed.length === 0) {
+        enqueueSnackbar(
+          rows.length === 1
+            ? `Forgot ${rows[0].name}`
+            : `Forgot ${rows.length} nodes`,
+          { variant: 'success' }
+        );
         onForgotten();
       } else {
         setFailures(failed);
