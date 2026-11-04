@@ -565,6 +565,9 @@ importers:
 
   packages/plugins/om:
     dependencies:
+      '@pmm-extensions/api':
+        specifier: workspace:*
+        version: link:../../extensions/api
       '@pmm-extensions/framework':
         specifier: workspace:*
         version: link:../../extensions/framework
@@ -1868,6 +1871,7 @@ packages:
   '@opentelemetry/sdk-trace-base@2.0.1':
     resolution: {integrity: sha512-xYLlvk/xdScGx1aEqvxLwf6sXQLXCjk3/1SQT9X9AoN5rXRhkdvIFShuNNmtTEPRBqcsMbS4p/gJLNI2wXaDuQ==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.3.0 <1.10.0'
 
