@@ -3,7 +3,11 @@ import { Page } from './Page';
 import { TestWrapper } from 'utils/testWrapper';
 import { UserContext } from 'contexts/user';
 import { Messages } from './Page.messages';
-import { TEST_USER_ADMIN } from 'utils/testStubs';
+import {
+  TEST_USER_ADMIN,
+  TEST_USER_ANONYMOUS,
+  TEST_USER_VIEWER,
+} from 'utils/testStubs';
 import { measurePageSurface, measureSurface } from 'utils/testUtils';
 
 describe('Page', () => {
@@ -57,6 +61,23 @@ describe('Page', () => {
 
     expect(screen.queryByText('Page Content')).toBeNull();
     expect(screen.queryByText(Messages.noAcccess)).toBeDefined();
+  });
+
+  it.each([
+    ['turns an anonymous reader away', TEST_USER_ANONYMOUS, false],
+    ['admits a signed-in reader', TEST_USER_VIEWER, true],
+  ])('with signedInOnly, %s', (_, user, shown) => {
+    render(
+      <TestWrapper>
+        <UserContext.Provider value={{ isLoading: false, user }}>
+          <Page signedInOnly>
+            <div>Page Content</div>
+          </Page>
+        </UserContext.Provider>
+      </TestWrapper>
+    );
+
+    expect(screen.queryByText('Page Content') !== null).toBe(shown);
   });
 
   describe('surface', () => {

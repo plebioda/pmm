@@ -27,4 +27,6 @@ export interface PageProps extends PropsWithChildren {
    */
   surface?: 'canvas' | 'paper';
   roles?: OrgRole[];
+  /** Turns an anonymous reader away, whatever org role Grafana gives them. */
+  signedInOnly?: boolean;
 }

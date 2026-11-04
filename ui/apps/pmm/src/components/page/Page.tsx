@@ -27,10 +27,13 @@ export const Page: FC<PageProps> = ({
   fullWidth,
   surface = 'paper',
   roles,
+  signedInOnly,
 }) => {
   const { user } = useUser();
   updateDocumentTitle(title);
-  const hasAccess = !roles || roles?.some((role) => user?.orgRole === role);
+  const hasAccess =
+    (!roles || roles?.some((role) => user?.orgRole === role)) &&
+    !(signedInOnly && user?.isAnonymous);
   // Back-compat: `fullWidth` predates `maxWidth`; treat it as `maxWidth="full"`
   // unless an explicit `maxWidth` is provided.
   const resolvedMaxWidth = maxWidth ?? (fullWidth ? 'full' : undefined);
