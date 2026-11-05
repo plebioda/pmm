@@ -327,10 +327,7 @@ export const RUN_STATUS_COLOR: Record<OmTopologyRunStatus, ChipProps['color']> =
  * in PMM Extensions still renders rather than disappearing from the form.
  */
 export const SETTING_LABEL: Record<string, string> = {
-  // Not "ENABLED". The raw key rendered in capitals, and said nothing about what it
-  // switches -- a reader could not tell it from PMM's own switch for the whole
-  // feature, which is a different control on a different page.
-  ENABLED: 'Automatic node scans',
+  AUTO_SCAN: 'Automatic node scans',
   SCHEDULE__every: 'Scan every',
   SCHEDULE__period: 'Period',
   PROBE_DATABASE: 'Connect to MongoDB',
@@ -363,8 +360,8 @@ export const SETTING_UNIT: Record<string, string> = {
 
 /** What each field costs or protects, for the reader deciding whether to touch it. */
 export const SETTING_HELP: Record<string, string> = {
-  ENABLED:
-    'Scan every node on a schedule. Off stops the schedule only - you can still scan from the Nodes page, and nothing already collected is removed.',
+  AUTO_SCAN:
+    'Scan every node on a schedule, and when PMM starts or Operations is turned on. Off stops all of these - you can still scan from the Nodes page, and nothing already collected is removed.',
   SCHEDULE__every:
     'How often every node is scanned. Each scan sends a job to every node.',
   PROBE_DATABASE:
@@ -477,7 +474,7 @@ export const BOOTSTRAP_RUN_COLOR: Record<
  * beside a warning.
  */
 export const SETTING_GROUP: Record<string, 'general' | 'scanning'> = {
-  ENABLED: 'general',
+  AUTO_SCAN: 'general',
   SCHEDULE__every: 'general',
   SCHEDULE__period: 'general',
   PROBE_DATABASE: 'general',
