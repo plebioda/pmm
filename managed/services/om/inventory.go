@@ -1071,6 +1071,13 @@ func bootstrapStepsToProto(steps []extensionsBootstrapStep) []*omv1.BootstrapSte
 // inventorySettingsClass is om_inventory's settings class on PMM Extensions' admin settings router.
 const inventorySettingsClass = "OmInventorySettings"
 
+// inventorySwitchKey is om_inventory's ENABLED flag, which follows PMM's Operations for MongoDB switch.
+const inventorySwitchKey = "ENABLED"
+
+// errInventorySwitchKey refuses a change Run would undo on its next tick.
+var errInventorySwitchKey = status.Error(codes.InvalidArgument,
+	"ENABLED follows PMM's Operations for MongoDB switch; turn Operations for MongoDB on or off in PMM Settings instead")
+
 // GetInventoryConfig returns the inventory app's configuration.
 func (s *Service) GetInventoryConfig(ctx context.Context, _ *omv1.GetInventoryConfigRequest) (*omv1.GetInventoryConfigResponse, error) {
 	probe, err := s.inventoryProbe()
@@ -1104,6 +1111,9 @@ func validateConfigValues(values *structpb.Struct) error {
 			"values names %d fields, at most %d may change in one call", len(fields), maxConfigFields)
 	}
 	for key, value := range fields {
+		if key == inventorySwitchKey {
+			return errInventorySwitchKey
+		}
 		if exceedsDepth(value, maxConfigDepth-1) {
 			return status.Errorf(codes.InvalidArgument,
 				"values.%s nests deeper than %d levels", key, maxConfigDepth)
@@ -1169,6 +1179,9 @@ func (s *Service) DeleteInventoryConfigOverride(
 	probe, err := s.inventoryProbe()
 	if err != nil {
 		return nil, err
+	}
+	if req.GetKey() == inventorySwitchKey {
+		return nil, errInventorySwitchKey
 	}
 
 	call := inventoryCall{method: http.MethodDelete, path: inventoryPath(inventorySettingsClass, req.GetKey())}

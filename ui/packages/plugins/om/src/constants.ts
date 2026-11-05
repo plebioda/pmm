@@ -322,9 +322,8 @@ export const RUN_STATUS_COLOR: Record<OmTopologyRunStatus, ChipProps['color']> =
 /**
  * Configuration fields the form never offers, even though the app reports them as hot.
  *
- * `ENABLED` gates every scan, manual ones included, and pmm-managed owns it: it writes
- * the Operations for MongoDB switch to it at every start, so a value set here would not
- * survive a restart. See PMM-15776.
+ * `ENABLED` gates every scan, manual ones included, and pmm-managed owns it: it keeps
+ * the Operations for MongoDB switch there and refuses a change to it. See PMM-15776.
  */
 export const HIDDEN_SETTINGS: ReadonlySet<string> = new Set(['ENABLED']);
 
@@ -336,6 +335,7 @@ export const HIDDEN_SETTINGS: ReadonlySet<string> = new Set(['ENABLED']);
  * in PMM Extensions still renders rather than disappearing from the form.
  */
 export const SETTING_LABEL: Record<string, string> = {
+  AUTO_SCAN: 'Automatic node scans',
   SCHEDULE__every: 'Scan every',
   SCHEDULE__period: 'Period',
   PROBE_DATABASE: 'Connect to MongoDB',
@@ -368,6 +368,8 @@ export const SETTING_UNIT: Record<string, string> = {
 
 /** What each field costs or protects, for the reader deciding whether to touch it. */
 export const SETTING_HELP: Record<string, string> = {
+  AUTO_SCAN:
+    'Scan every node on a schedule, and when PMM starts or Operations is turned on. Off stops all of these - you can still scan from the Nodes page, and nothing already collected is removed.',
   SCHEDULE__every:
     'How often every node is scanned. Each scan sends a job to every node.',
   PROBE_DATABASE:
@@ -480,6 +482,7 @@ export const BOOTSTRAP_RUN_COLOR: Record<
  * beside a warning.
  */
 export const SETTING_GROUP: Record<string, 'general' | 'scanning'> = {
+  AUTO_SCAN: 'general',
   SCHEDULE__every: 'general',
   SCHEDULE__period: 'general',
   PROBE_DATABASE: 'general',
