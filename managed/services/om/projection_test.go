@@ -48,15 +48,16 @@ func mongoService(id, name, cluster, replicationSet, environment string) *models
 func liveFacts(state string, extra map[string]MergedField) map[string]MergedField {
 	observed := projectionNow.Add(-5 * time.Second)
 	fields := map[string]MergedField{
-		fieldExporterUp:      {Value: 1.0, Source: sourceMetrics, ObservedAt: &observed},
-		fieldState:           {Value: state, Source: sourceMetrics, ObservedAt: &observed},
-		fieldVersion:         {Value: "7.0.39-21", Source: sourceMetrics, ObservedAt: &observed},
-		fieldVendor:          {Value: "Percona", Source: sourceMetrics, ObservedAt: &observed},
-		fieldEdition:         {Value: "Community", Source: sourceMetrics, ObservedAt: &observed},
-		fieldHost:            {Value: "host-a", Source: sourceMetrics, ObservedAt: &observed},
-		fieldEndpoint:        {Value: "host-a:27017", Source: sourceMetrics, ObservedAt: &observed},
-		fieldCPUUsage:        {Value: 12.5, Source: sourceMetrics, ObservedAt: &observed},
-		fieldConnectionsFree: {Value: 99.5, Source: sourceMetrics, ObservedAt: &observed},
+		fieldExporterUp:           {Value: 1.0, Source: sourceMetrics, ObservedAt: &observed},
+		fieldState:                {Value: state, Source: sourceMetrics, ObservedAt: &observed},
+		fieldVersion:              {Value: "7.0.39-21", Source: sourceMetrics, ObservedAt: &observed},
+		fieldVendor:               {Value: "Percona", Source: sourceMetrics, ObservedAt: &observed},
+		fieldEdition:              {Value: "Community", Source: sourceMetrics, ObservedAt: &observed},
+		fieldHost:                 {Value: "host-a", Source: sourceMetrics, ObservedAt: &observed},
+		fieldEndpoint:             {Value: "host-a:27017", Source: sourceMetrics, ObservedAt: &observed},
+		fieldCPUUsage:             {Value: 12.5, Source: sourceMetrics, ObservedAt: &observed},
+		fieldConnectionsCurrent:   {Value: 2.0, Source: sourceMetrics, ObservedAt: &observed},
+		fieldConnectionsAvailable: {Value: 398.0, Source: sourceMetrics, ObservedAt: &observed},
 	}
 	maps.Copy(fields, extra)
 	return fields
@@ -96,7 +97,7 @@ func TestBuildDocument(t *testing.T) {
 		// The sample survives the lookback window, so only its age says it is not current.
 		stale := projectionNow.Add(-10 * time.Minute)
 		fields := liveFacts("PRIMARY", nil)
-		for _, key := range []string{fieldExporterUp, fieldState, fieldCPUUsage, fieldConnectionsFree} {
+		for _, key := range []string{fieldExporterUp, fieldState, fieldCPUUsage, fieldConnectionsCurrent, fieldConnectionsAvailable} {
 			held := fields[key]
 			held.ObservedAt = &stale
 			fields[key] = held
@@ -149,6 +150,24 @@ func TestBuildDocument(t *testing.T) {
 		// A standalone emits neither.
 		doc = buildDocument(services, map[string]map[string]MergedField{"s1": liveFacts("PRIMARY", nil)}, projectionNow, projectionMaxAge)
 		assert.Nil(t, onlyService(t, doc).OplogWindowSeconds)
+	})
+
+	t.Run("a primary shows no lag, even with its last reading as a secondary still live", func(t *testing.T) {
+		t.Parallel()
+
+		observed := projectionNow.Add(-10 * time.Second)
+		withLag := func(state string) map[string]MergedField {
+			return liveFacts(state, map[string]MergedField{
+				fieldReplicationLag: {Value: 4.0, Source: sourceMetrics, ObservedAt: &observed},
+			})
+		}
+		services := []*models.Service{mongoService("s1", "mongo-1", "c1", "rs0", "prod")}
+
+		doc := buildDocument(services, map[string]map[string]MergedField{"s1": withLag("PRIMARY")}, projectionNow, projectionMaxAge)
+		assert.Nil(t, onlyService(t, doc).ReplicationLagSeconds)
+
+		doc = buildDocument(services, map[string]map[string]MergedField{"s1": withLag("SECONDARY")}, projectionNow, projectionMaxAge)
+		assert.InDelta(t, 4.0, onlyService(t, doc).GetReplicationLagSeconds(), 0.001)
 	})
 
 	t.Run("the process role comes from the exporter, not a port convention", func(t *testing.T) {
