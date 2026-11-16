@@ -48,15 +48,16 @@ func mongoService(id, name, cluster, replicationSet, environment string) *models
 func liveFacts(state string, extra map[string]MergedField) map[string]MergedField {
 	observed := projectionNow.Add(-5 * time.Second)
 	fields := map[string]MergedField{
-		fieldExporterUp:      {Value: 1.0, Source: sourceMetrics, ObservedAt: &observed},
-		fieldState:           {Value: state, Source: sourceMetrics, ObservedAt: &observed},
-		fieldVersion:         {Value: "7.0.39-21", Source: sourceMetrics, ObservedAt: &observed},
-		fieldVendor:          {Value: "Percona", Source: sourceMetrics, ObservedAt: &observed},
-		fieldEdition:         {Value: "Community", Source: sourceMetrics, ObservedAt: &observed},
-		fieldHost:            {Value: "host-a", Source: sourceMetrics, ObservedAt: &observed},
-		fieldEndpoint:        {Value: "host-a:27017", Source: sourceMetrics, ObservedAt: &observed},
-		fieldCPUUsage:        {Value: 12.5, Source: sourceMetrics, ObservedAt: &observed},
-		fieldConnectionsFree: {Value: 99.5, Source: sourceMetrics, ObservedAt: &observed},
+		fieldExporterUp:           {Value: 1.0, Source: sourceMetrics, ObservedAt: &observed},
+		fieldState:                {Value: state, Source: sourceMetrics, ObservedAt: &observed},
+		fieldVersion:              {Value: "7.0.39-21", Source: sourceMetrics, ObservedAt: &observed},
+		fieldVendor:               {Value: "Percona", Source: sourceMetrics, ObservedAt: &observed},
+		fieldEdition:              {Value: "Community", Source: sourceMetrics, ObservedAt: &observed},
+		fieldHost:                 {Value: "host-a", Source: sourceMetrics, ObservedAt: &observed},
+		fieldEndpoint:             {Value: "host-a:27017", Source: sourceMetrics, ObservedAt: &observed},
+		fieldCPUUsage:             {Value: 12.5, Source: sourceMetrics, ObservedAt: &observed},
+		fieldConnectionsCurrent:   {Value: 2.0, Source: sourceMetrics, ObservedAt: &observed},
+		fieldConnectionsAvailable: {Value: 398.0, Source: sourceMetrics, ObservedAt: &observed},
 	}
 	maps.Copy(fields, extra)
 	return fields
@@ -96,7 +97,7 @@ func TestBuildDocument(t *testing.T) {
 		// The sample survives the lookback window, so only its age says it is not current.
 		stale := projectionNow.Add(-10 * time.Minute)
 		fields := liveFacts("PRIMARY", nil)
-		for _, key := range []string{fieldExporterUp, fieldState, fieldCPUUsage, fieldConnectionsFree} {
+		for _, key := range []string{fieldExporterUp, fieldState, fieldCPUUsage, fieldConnectionsCurrent, fieldConnectionsAvailable} {
 			held := fields[key]
 			held.ObservedAt = &stale
 			fields[key] = held

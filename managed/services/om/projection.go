@@ -119,7 +119,7 @@ func serviceDocument(service *models.Service, fields fieldSet) *omv1.TopologySer
 		State:                  optional(state),
 		Status:                 serviceStatus(up),
 		CpuUsagePercent:        gauge(fields.f64(fieldCPUUsage), up),
-		ConnectionsFreePercent: gauge(fields.f64(fieldConnectionsFree), up),
+		ConnectionsFreePercent: gauge(connectionsFree(fields), up),
 		ProcessRole:            role,
 		ReplicationLagSeconds:  optionalDouble(fields.f64(fieldReplicationLag)),
 		OplogWindowSeconds:     optionalDouble(oplogWindow(fields)),
@@ -213,6 +213,15 @@ func oplogWindow(fields fieldSet) *float64 {
 	}
 	window := *head - *tail
 	return &window
+}
+
+func connectionsFree(fields fieldSet) *float64 {
+	current, available := fields.f64(fieldConnectionsCurrent), fields.f64(fieldConnectionsAvailable)
+	if current == nil || available == nil || *current+*available <= 0 {
+		return nil
+	}
+	free := 100 * *available / (*current + *available) //nolint:mnd
+	return &free
 }
 
 func buildSummary(environments []*omv1.Environment) *omv1.Summary {

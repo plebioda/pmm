@@ -31,22 +31,22 @@ const (
 	metricUp = "mongodb_up"
 	// Emitted only by a mongos, so its presence identifies a router.
 	metricMongosShards = "mongodb_mongos_sharding_shards_total"
-	// One series per (reporting node, secondary peer), so it needs a reducer. A primary or a
-	// single-member set has none, which means not applicable rather than not collected.
+	// Each member reports the lag of every secondary it sees, and self="1" marks its own. A primary or a
+	// single-member set has none of its own, which means not applicable rather than not collected.
 	metricReplicationLag = "mongodb_mongod_replset_member_replication_lag"
 	// Oplog bounds as epoch seconds; their difference is the window. A standalone emits neither.
 	metricOplogHead = "mongodb_mongod_replset_oplog_head_timestamp"
 	metricOplogTail = "mongodb_mongod_replset_oplog_tail_timestamp"
+	// Labelled with the member's role in rs_state, so a role switch starts new series. Both counts come from
+	// one serverStatus, so the freshest series of each share an rs_state.
+	metricConnections = "mongodb_connections"
 )
 
-// Derived percentages: %[1]s is the series matcher and %[2]s the window. An irate over 30s needs two
-// raw samples, so a service that stopped reporting drops out without last_over_time.
+// A derived percentage: %[1]s is the series matcher and %[2]s the window. An irate over 30s needs two raw samples,
+// so a stopped service drops out, and max rather than sum keeps the series a role switch leaves from counting twice.
 const (
-	queryCPUUsage = `100 * (1 - sum by (service_id) (irate(mongodb_sys_cpu_idle_ms{%[1]s}[30s]))` +
+	queryCPUUsage = `100 * (1 - max by (service_id) (irate(mongodb_sys_cpu_idle_ms{%[1]s}[30s]))` +
 		` / (1000 * max by (service_id) (last_over_time(mongodb_sys_cpu_num_logical_cores{%[1]s}[%[2]s]))))`
-	queryConnectionsFree = `100 * max by (service_id) (last_over_time(mongodb_connections{%[1]s,state="available"}[%[2]s]))` +
-		` / (max by (service_id) (last_over_time(mongodb_connections{%[1]s,state="current"}[%[2]s]))` +
-		` + max by (service_id) (last_over_time(mongodb_connections{%[1]s,state="available"}[%[2]s])))`
 )
 
 // queryLastUp is the newest moment in the window at which mongodb_up read 1, as epoch seconds.
@@ -76,7 +76,7 @@ var sourceQueries = []string{
 	metricUp,
 	metricMongosShards,
 	"mongodb_sys_cpu_idle_ms",
-	"mongodb_connections",
+	metricConnections,
 	metricReplicationLag,
 	metricOplogHead,
 	metricOplogTail,
@@ -98,7 +98,6 @@ const (
 	fieldNodeType         = "node_type"
 	fieldExporterUp       = "exporter_up"
 	fieldCPUUsage         = "cpu_usage_percent"
-	fieldConnectionsFree  = "connections_free_percent"
 	fieldIsMongos         = "is_mongos"
 	fieldReplicationLag   = "replication_lag_seconds"
 	fieldOplogHead        = "oplog_head_timestamp"
@@ -107,20 +106,25 @@ const (
 	fieldConfigPath       = "config_path"
 	fieldArgv             = "argv"
 	fieldLastUp           = "last_up_at"
+
+	// The projection derives the free-connections percentage from these two.
+	fieldConnectionsCurrent   = "connections_current"
+	fieldConnectionsAvailable = "connections_available"
 )
 
 // volatileFields describe now rather than the service. Read past volatileMaxAge they yield nothing,
 // so a stopped database reads DOWN instead of a day-old UP.
 var volatileFields = map[string]bool{
-	fieldState:           true,
-	fieldClusterRole:     true,
-	fieldExporterUp:      true,
-	fieldCPUUsage:        true,
-	fieldConnectionsFree: true,
-	fieldIsMongos:        true,
-	fieldReplicationLag:  true,
-	fieldOplogHead:       true,
-	fieldOplogTail:       true,
+	fieldState:                true,
+	fieldClusterRole:          true,
+	fieldExporterUp:           true,
+	fieldCPUUsage:             true,
+	fieldConnectionsCurrent:   true,
+	fieldConnectionsAvailable: true,
+	fieldIsMongos:             true,
+	fieldReplicationLag:       true,
+	fieldOplogHead:            true,
+	fieldOplogTail:            true,
 }
 
 // clusterRoles maps the exporter's cl_role label onto process_role. An unrecognised label means

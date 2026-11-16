@@ -110,6 +110,8 @@ To find the affected endpoints and update your automation, [check the PMM API re
 
 - [PMM-15910](https://perconadev.atlassian.net/browse/PMM-15910): Fixed an issue where PMM Server could stay unhealthy after an abrupt stop, for example `docker kill`, a host crash or running out of memory. The built-in PostgreSQL database refused to start because of lock files left over from the previous run. PMM Server now removes these files when it starts.
 
+- [PMM-15922](https://perconadev.atlassian.net/browse/PMM-15922): Fixed wrong values in the **Repl. lag**, **Conn. free** and **CPU** columns on the **Services** tab of **MongoDB > Operations > Fleet**. A primary showed the replication lag of its slowest secondary, and each secondary showed the worst lag of any member. Each member now shows only its own lag, and a primary shows none. After a primary and a secondary switched roles, **Conn. free** mixed figures from before and after the switch for up to a day, and **CPU** dropped below zero for about 30 seconds. **Conn. free** now matches what MongoDB reports right after the switch, and **CPU** no longer drops below zero. The **Max repl. lag**, **Min conn. free** and **Max CPU** columns on the **Clusters** tab are corrected too. For details, see [Operations for MongoDB](../use/mongodb-operations.md#view-fleet-health).
+
 ## 🔶 Known issues
 
 ## 🚀 Ready to upgrade to PMM {{VERSION}}?
