@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/percona/pmm/managed/models"
@@ -131,12 +132,15 @@ func (s *Service) advanceRunningRun(ctx context.Context, run *extensionsBootstra
 			s.finishBootstrapRun(ctx, run, bootstrapRunRolledBack, rolledBackReason(*run))
 			return
 		}
+		if runRollbackFailed(*run) {
+			reason := rollbackFailedReason(*run)
+			s.l.Warnf("bootstrap run %s: %s", run.ID, reason)
+			s.finishBootstrapRun(ctx, run, bootstrapRunFailed, reason)
+			return
+		}
 		for _, host := range run.Hosts {
 			if action := nextRollbackAction(host); action != nil {
 				s.dispatchRollback(ctx, run, host.Host, action.name)
-			} else if hostRollbackStarted(host) && !hostRollbackDone(host) {
-				s.l.Warnf("bootstrap run %s: host %s's rollback is stuck; an operator needs to intervene",
-					run.ID, host.Host)
 			}
 		}
 		return
@@ -214,15 +218,18 @@ func (s *Service) finishBootstrapRun(ctx context.Context, run *extensionsBootstr
 	}
 }
 
-// completeSucceededRun registers a succeeded run's hosts with PMM, then marks the run registered once the
-// inventory app shows each host's own service or bootstrapInventoryRefreshWindow has passed.
+// completeSucceededRun registers a succeeded run's hosts with PMM and marks the run registered once the
+// inventory app shows each host's own service, or, with what is missing, once the refresh window has passed.
 func (s *Service) completeSucceededRun(ctx context.Context, run *extensionsBootstrapRun) {
 	secret, err := models.FindOmBootstrapSecretByRunID(s.db.Querier, run.ID)
 	if err != nil {
 		s.l.Warnf("bootstrap run %s: succeeded but has no stored secret to register with: %s", run.ID, err)
+		if errors.Is(err, models.ErrNotFound) && !refreshRetryWindowOpen(run, time.Now()) {
+			s.markRunRegistered(run.ID, []string{"PMM holds no monitoring credentials for this install"})
+		}
 		return
 	}
-	environment, cluster := s.bootstrapRunConfigLabels(run.ID)
+	config := s.bootstrapRunConfig(run.ID)
 
 	hostsByExecutor, err := s.inventoryHostsByExecutor(ctx)
 	if err != nil {
@@ -230,23 +237,25 @@ func (s *Service) completeSucceededRun(ctx context.Context, run *extensionsBoots
 		return
 	}
 
+	var problems []string
 	unconfirmed := make([]string, 0, len(run.Hosts))
-	done := 0
 	for _, host := range run.Hosts {
 		inventoryHost, ok := hostsByExecutor[host.Host]
 		if !ok {
 			s.l.Warnf("bootstrap run %s: executor %s has no row in the inventory app yet", run.ID, host.Host)
+			problems = append(problems, host.Host+": Operations lists no node for it")
 			continue
 		}
-		err = s.registerBootstrapHost(ctx, inventoryHost.NodeID, host.Host, run.ReplicaSetName, run.Port, environment, cluster,
-			secret.MongoDBUsername, secret.MongoDBPassword)
+		err = s.registerBootstrapHost(ctx, inventoryHost.NodeID, host.Host, run.ReplicaSetName, run.Port,
+			config.Environment, config.Cluster, secret.MongoDBUsername, secret.MongoDBPassword)
 		if err != nil {
 			s.l.Warnf("bootstrap run %s: failed to register %s with PMM: %s", run.ID, host.Host, err)
+			problems = append(problems, fmt.Sprintf("%s: %s", host.Host, err))
 			continue
 		}
-		done++
 		if !hasBootstrapService(inventoryHost, host.Host, run.Port) {
 			unconfirmed = append(unconfirmed, inventoryHost.NodeID)
+			problems = append(problems, host.Host+": Operations does not list its MongoDB service")
 		}
 	}
 
@@ -256,17 +265,24 @@ func (s *Service) completeSucceededRun(ctx context.Context, run *extensionsBoots
 		s.triggerScopedInventoryRefresh(ctx, unconfirmed)
 	}
 
-	if done < len(run.Hosts) {
-		return
-	}
-	if len(unconfirmed) > 0 && refreshRetryWindowOpen(run, time.Now()) {
+	if len(problems) > 0 && refreshRetryWindowOpen(run, time.Now()) {
 		// The sync answers 202 and completes in the background, so this tick's probe can miss the service;
 		// keep the run in the sweep until a later tick sees it.
 		return
 	}
-	err = models.MarkOmBootstrapRunRegistered(s.db.Querier, run.ID)
+	s.markRunRegistered(run.ID, problems)
+}
+
+// markRunRegistered takes the run out of the sweep, recording what PMM could not register or confirm.
+func (s *Service) markRunRegistered(runID string, problems []string) {
+	var registrationError *string
+	if len(problems) > 0 {
+		registrationError = new(strings.Join(problems, "; "))
+		s.l.Warnf("bootstrap run %s: gave up registering it with PMM: %s", runID, *registrationError)
+	}
+	err := models.MarkOmBootstrapRunRegistered(s.db.Querier, runID, registrationError)
 	if err != nil {
-		s.l.Warnf("bootstrap run %s: registered every host, but failed to record it: %s", run.ID, err)
+		s.l.Warnf("bootstrap run %s: failed to record its registration: %s", runID, err)
 	}
 }
 

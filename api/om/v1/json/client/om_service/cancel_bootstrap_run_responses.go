@@ -795,8 +795,10 @@ type CancelBootstrapRunOKBodyRunHostsItems0 struct {
 	//
 	// The last entry, named "confirm_monitoring", is PMM's own -- PMM Extensions never
 	// dispatches it. It stays "pending" until the run itself has succeeded, then
-	// "running" until PMM's inventory app notices the registered service, then
-	// "succeeded".
+	// "running" until PMM's inventory app lists this host's service or PMM has
+	// finished registering the run, and "succeeded" from then on. If PMM could not
+	// register or see this host's service within a few minutes, it reads "failed",
+	// with the reason in its detail, until the inventory app lists the service.
 	FinalizeSteps []*CancelBootstrapRunOKBodyRunHostsItems0FinalizeStepsItems0 `json:"finalize_steps"`
 }
 

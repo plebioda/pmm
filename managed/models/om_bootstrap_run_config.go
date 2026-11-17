@@ -31,8 +31,10 @@ type OmBootstrapRunConfig struct {
 	Environment string    `reform:"environment"`
 	Cluster     string    `reform:"cluster"`
 	CreatedAt   time.Time `reform:"created_at"`
-	// RegisteredAt is nil until every host of the run is registered in PMM's inventory.
+	// RegisteredAt is nil until PMM has finished registering the run's hosts, successfully or not.
 	RegisteredAt *time.Time `reform:"registered_at"`
+	// RegistrationError names the hosts PMM could not register or see listed by then, nil if none.
+	RegistrationError *string `reform:"registration_error"`
 }
 
 // BeforeInsert implements reform.BeforeInserter.
