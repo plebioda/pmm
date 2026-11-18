@@ -482,6 +482,39 @@ export function groupRuns(runs: OmInventoryRun[]): OmRunGroup[] {
   return groups;
 }
 
+/**
+ * `groups` with each one keeping the id of the earlier group it shares most runs with,
+ * so its row stays the same row as scans join it and older ones leave the list.
+ */
+export function keepGroupIds(
+  groups: OmRunGroup[],
+  earlier: OmRunGroup[]
+): OmRunGroup[] {
+  const earlierId = new Map(
+    earlier.flatMap((group) => group.runs.map((run) => [run.run_id, group.id]))
+  );
+  const taken = new Set<string>();
+  return groups.map((group) => {
+    const shared = new Map<string, number>();
+    for (const run of group.runs) {
+      const id = earlierId.get(run.run_id);
+      if (id !== undefined && !taken.has(id)) {
+        shared.set(id, (shared.get(id) ?? 0) + 1);
+      }
+    }
+    let id = group.id;
+    let most = 0;
+    // On a tie the older group's id, met later: a scan seen running joins it.
+    for (const [candidate, count] of shared) {
+      if (count >= most) {
+        [id, most] = [candidate, count];
+      }
+    }
+    taken.add(id);
+    return id === group.id ? group : { ...group, id };
+  });
+}
+
 /** How many recent scans {@link expectedScanSeconds} takes the middle of. */
 const EXPECTED_FROM_RUNS = 5;
 

@@ -15,7 +15,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import {
   Accordion,
@@ -34,6 +34,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { EmptyState } from './components/EmptyState';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { Table, type MRT_ColumnDef } from '@percona/percona-ui';
+import type { MRT_ExpandedState } from 'material-react-table';
 import {
   formatAbsoluteTime,
   formatTimestamp,
@@ -62,6 +63,7 @@ import {
   groupRuns,
   isBoundedPeriod,
   isRunPeriod,
+  keepGroupIds,
   RUN_PERIODS,
   WINDOWED_RUN_LIMIT,
   type OmRunGroup,
@@ -134,14 +136,16 @@ const FailingNodes = ({ nodes }: { nodes: OmInventoryRunFailingNode[] }) => {
  * The scans a group stands for, each still openable to its own receipt.
  *
  * Unmounted while folded, so a group of a hundred scans does not ask for a hundred
- * receipts.
+ * receipts. Which are open is the tab's, since the group's row remounts as it moves.
  */
 const GroupRuns = ({
   group,
-  expandRunId,
+  openRuns,
+  onToggleRun,
 }: {
   group: OmRunGroup;
-  expandRunId: string | null;
+  openRuns: ReadonlySet<string>;
+  onToggleRun: (runId: string) => void;
 }) => (
   <Stack spacing={1} data-testid="om-run-group">
     {group.runs.map((run) => (
@@ -149,7 +153,8 @@ const GroupRuns = ({
         key={run.run_id}
         disableGutters
         variant="outlined"
-        defaultExpanded={run.run_id === expandRunId}
+        expanded={openRuns.has(run.run_id)}
+        onChange={() => onToggleRun(run.run_id)}
         slotProps={{ transition: { unmountOnExit: true } }}
       >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -504,14 +509,39 @@ export const AutomationsScansTab = () => {
     limit: isBoundedPeriod(period) ? WINDOWED_RUN_LIMIT : DEFAULT_RUN_LIMIT,
   });
   // Consecutive scans that ended the same way are one row: a node broken since
-  // Tuesday reads as one row, not one per scan.
-  const rows = useMemo(() => groupRuns(runs ?? []), [runs]);
-  // `?expand=<run_id>` unfolds that scan's row on landing - the group holding it, and
-  // the scan itself inside the group.
+  // Tuesday reads as one row, not one per scan. Its id outlasts the scans joining it.
+  const earlier = useRef<OmRunGroup[]>([]);
+  const rows = useMemo(
+    () => keepGroupIds(groupRuns(runs ?? []), earlier.current),
+    [runs]
+  );
+  useEffect(() => {
+    earlier.current = rows;
+  }, [rows]);
+  // `?expand=<run_id>` unfolds that scan's row once it is fetched - the group holding
+  // it, and the scan itself inside the group.
   const expandRunId = params.get('expand');
   const expandGroupId = rows.find((group) =>
     group.runs.some((run) => run.run_id === expandRunId)
   )?.id;
+  const [expanded, setExpanded] = useState<MRT_ExpandedState>({});
+  const [openRuns, setOpenRuns] = useState<ReadonlySet<string>>(new Set());
+  const toggleRun = (runId: string) =>
+    setOpenRuns((current) => {
+      const next = new Set(current);
+      return next.delete(runId) ? next : next.add(runId);
+    });
+  // Once per link, so a group the reader then folds stays folded.
+  const opened = useRef<string | null>(null);
+  useEffect(() => {
+    if (expandGroupId && expandRunId && opened.current !== expandRunId) {
+      opened.current = expandRunId;
+      setExpanded((current) =>
+        current === true ? current : { ...current, [expandGroupId]: true }
+      );
+      setOpenRuns((current) => new Set(current).add(expandRunId));
+    }
+  }, [expandGroupId, expandRunId]);
 
   const setPeriod = (next: OmRunPeriod) =>
     setParams((current) => {
@@ -574,14 +604,17 @@ export const AutomationsScansTab = () => {
           enablePagination={false}
           enableStickyHeader
           enableExpanding
-          initialState={
-            expandGroupId ? { expanded: { [expandGroupId]: true } } : undefined
-          }
+          state={{ expanded }}
+          onExpandedChange={setExpanded}
           renderDetailPanel={({ row }) =>
             row.original.runs.length === 1 ? (
               <RunEntities run={row.original.runs[0]} />
             ) : (
-              <GroupRuns group={row.original} expandRunId={expandRunId} />
+              <GroupRuns
+                group={row.original}
+                openRuns={openRuns}
+                onToggleRun={toggleRun}
+              />
             )
           }
         />
