@@ -51,6 +51,8 @@ import {
 import {
   expectedScanSeconds,
   periodSince,
+  isScanHeld,
+  scopesOverlap,
   type OmEstateStatus,
   type OmRunPeriod,
 } from './inventory';
@@ -311,17 +313,26 @@ export function useIsEstateRefreshing(): boolean {
   return (runs ?? []).some((run) => isRunActive(run.status));
 }
 
+/** {@link isScanHeld} over the newest 25 runs, for the nodes a caller asks about. */
+export function useIsScanHeld(requesting = false) {
+  const { data: runs } = useOmInventoryRuns();
+  return (wanted: string[]) => isScanHeld(runs ?? [], wanted, requesting);
+}
+
 /**
- * The scan in flight, if any, and when the history was last read - so a caller can
- * tell "no scan is running" from "not read since I asked".
+ * The scan in flight that a scan of `nodeIds` would collide with (any, when empty),
+ * and when the history was last read - so a caller can tell "no scan is running" from
+ * "not read since I asked".
  */
-export function useActiveInventoryRun(): {
+export function useActiveInventoryRun(nodeIds: string[] = []): {
   run: OmInventoryRun | undefined;
   updatedAt: number;
 } {
   const { data: runs, dataUpdatedAt } = useOmInventoryRuns();
   return {
-    run: (runs ?? []).find((run) => isRunActive(run.status)),
+    run: (runs ?? []).find(
+      (run) => isRunActive(run.status) && scopesOverlap(run.scope, nodeIds)
+    ),
     updatedAt: dataUpdatedAt,
   };
 }
