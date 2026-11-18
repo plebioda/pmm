@@ -82,6 +82,7 @@ import { AdminAction } from './components/AdminAction';
 import { useOmBase } from './useOmBase';
 import type { OmHostRow } from './types';
 import { OmError } from './components/OmError';
+import { substringSearch } from './tableSearch';
 
 /**
  * The columns a row opens with: which node, what is on it, whether Operations can
@@ -457,10 +458,16 @@ function useColumns(
 ): MRT_ColumnDef<OmHostRow>[] {
   return useMemo(
     () => [
-      { accessorKey: 'name', header: 'Node', size: 180 },
+      {
+        accessorKey: 'name',
+        header: 'Node',
+        size: 180,
+        enableGlobalFilter: true,
+      },
       {
         accessorKey: 'address',
         header: 'Address',
+        enableGlobalFilter: true,
         Cell: ({ row: { original } }) =>
           original.address ?? <Unavailable reason="not_applicable" />,
       },
@@ -956,6 +963,7 @@ export const NodesPage = () => {
     // is "hide this column", which the chooser in the toolbar already does.
     layoutMode: 'grid',
     enableColumnActions: false,
+    ...substringSearch<OmHostRow>('Search name or address'),
     // The actions column has to hold "Scan" beside "Install MongoDB", and MRT's
     // default for it is narrower than that - so the install action was clipped at
     // the right edge, which is the same width problem all over again.
