@@ -58,6 +58,11 @@ function perNodePhases(
  * run-level ones, then each node's finalize steps. The same order the matrix shows.
  */
 function forwardPhases(run: OmGetBootstrapRunResponse): RunPhase[] {
+  return [...installPhases(run), ...perNodePhases(run, 'finalize_steps')];
+}
+
+/** Each node's own steps, then the run-level ones. */
+function installPhases(run: OmGetBootstrapRunResponse): RunPhase[] {
   return [
     ...perNodePhases(run, 'steps'),
     ...run.run_steps.map((step) => ({
@@ -65,7 +70,6 @@ function forwardPhases(run: OmGetBootstrapRunResponse): RunPhase[] {
       perNode: false,
       steps: [{ node: '', step }],
     })),
-    ...perNodePhases(run, 'finalize_steps'),
   ];
 }
 
@@ -302,4 +306,131 @@ export function runSummaryLine(
   return `${step[0].toUpperCase()}${step.slice(1)}: ${what}${
     elapsed ? `, running for ${elapsed}` : ''
   }`;
+}
+
+/** About how long a step's reason may be before it is cut at a word. */
+const EXCERPT_CHARS = 200;
+
+/** A failed step's detail split for reading: what broke, the rest, and its logs. */
+interface StepFailureReason {
+  /** The last line of the detail, where mongod, apt and dnf say what broke. */
+  excerpt: string;
+  /** The whole detail without its task history suffix, newlines kept. */
+  detail: string;
+  taskHistoryId: string | null;
+}
+
+/**
+ * Split a step's detail: PMM Extensions writes a reason, then the end of the step's
+ * output, then " (task history N)", and only that suffix has a fixed form.
+ */
+export function stepFailureReason(text: string): StepFailureReason {
+  const suffix = /\s*\(task history (\d+)\)\s*$/.exec(text);
+  const detail = (suffix ? text.slice(0, suffix.index) : text).trim();
+  const lines = detail
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const last = lines[lines.length - 1] ?? detail;
+  return {
+    excerpt:
+      last.length <= EXCERPT_CHARS
+        ? last
+        : `…${cutToWord(last.slice(-EXCERPT_CHARS))}`,
+    detail,
+    taskHistoryId: suffix?.[1] ?? null,
+  };
+}
+
+/** `text` from its first word boundary on, unless it has none. */
+function cutToWord(text: string): string {
+  const space = text.search(/\s/);
+  return space === -1 ? text : text.slice(space + 1);
+}
+
+/** A failed step with its reason, and whether it is about to be retried. */
+export interface StepFailure {
+  step: string;
+  /** The node's name, or empty for a run-level step. */
+  node: string;
+  attempt: number;
+  final: boolean;
+  rollback: boolean;
+  reason: StepFailureReason;
+}
+
+/**
+ * The failed steps of a run that say why: install steps, then rollback steps. Not
+ * finalize steps, since monitoring can fail to be confirmed on a run that succeeded.
+ */
+export function runFailures(
+  run: OmGetBootstrapRunResponse,
+  nodeName: (nodeId: string) => string
+): StepFailure[] {
+  const isFinal = finalFailures(run);
+  const collect = (
+    phases: RunPhase[],
+    rollback: boolean,
+    final: (step: OmBootstrapStep) => boolean
+  ): StepFailure[] =>
+    phases.flatMap((phase) =>
+      phase.steps
+        .filter(({ step }) => step.status === 'failed' && step.detail)
+        .map(({ node, step }) => ({
+          step: phase.name,
+          node: phase.perNode ? nodeName(node) : '',
+          attempt: step.attempt_count,
+          final: final(step),
+          rollback,
+          reason: stepFailureReason(step.detail ?? ''),
+        }))
+    );
+  return [
+    ...collect(installPhases(run), false, isFinal.forward),
+    ...collect(perNodePhases(run, 'rollback_steps'), true, isFinal.rollback),
+  ];
+}
+
+/**
+ * Why a run failed or is failing, one line per reason with the nodes it holds on: a
+ * failed rollback first, then the install's, or its first failed attempt.
+ */
+export function runFailureLines(failures: StepFailure[]): string[] {
+  const lines = (label: string, picked: StepFailure[]) => {
+    const nodes = new Map<string, string[]>();
+    for (const { reason, node } of picked) {
+      nodes.set(reason.excerpt, [...(nodes.get(reason.excerpt) ?? []), node]);
+    }
+    return [...nodes].map(([excerpt, on]) => {
+      const named = on.filter(Boolean);
+      return `${label}: ${excerpt}${named.length ? ` (on ${named.join(', ')})` : ''}`;
+    });
+  };
+  const install = failures.filter((failure) => !failure.rollback);
+  const finalInstall = install.filter((failure) => failure.final);
+  return [
+    ...lines(
+      'Rollback failed',
+      failures.filter((failure) => failure.rollback && failure.final)
+    ),
+    ...(finalInstall.length
+      ? lines('Why', finalInstall)
+      : install.length
+        ? lines(`Attempt ${install[0].attempt} failed`, install)
+        : []),
+  ];
+}
+
+/**
+ * Why a run failed or is failing: the run's own error first when an operator aborted
+ * it, or alone when no step says why, then each step's reason.
+ */
+export function runReasons(
+  run: OmGetBootstrapRunResponse,
+  failures: StepFailure[]
+): string[] {
+  const lines = runFailureLines(failures);
+  return run.error && (run.cancel_requested || lines.length === 0)
+    ? [run.error, ...lines]
+    : lines;
 }

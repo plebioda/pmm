@@ -28,7 +28,10 @@ const { useOmBootstrapRuns } = vi.hoisted(() => ({
   useOmBootstrapRuns: vi.fn(),
 }));
 
-vi.mock('../src/inventoryHooks', () => ({ useOmBootstrapRuns }));
+vi.mock('../src/inventoryHooks', () => ({
+  useOmBootstrapRuns,
+  useOmInventoryHosts: () => ({ data: [] }),
+}));
 // The header is what these tests read; the Scans tab's content has its own suite.
 vi.mock('../src/AutomationsScansTab', () => ({
   AutomationsScansTab: () => null,
@@ -91,6 +94,51 @@ describe('AutomationsPage installs', () => {
     expect(
       screen.queryByText(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)
     ).toBeNull();
+  });
+});
+
+describe('AutomationsPage status chip', () => {
+  it('says why a run is failing on hover, while it still rolls back', async () => {
+    useOmBootstrapRuns.mockReturnValue({
+      data: [
+        {
+          ...run('failing', RECENT),
+          status: 'running',
+          finished_at: null,
+          hosts: [
+            {
+              host: 'node03',
+              steps: [
+                {
+                  name: 'start_service',
+                  status: 'failed',
+                  attempt_count: 2,
+                  detail:
+                    'Starting mongod: Failed\nError setting up listener: setup bind (task history 7)',
+                },
+              ],
+              rollback_steps: [
+                { name: 'stop_service', status: 'running', attempt_count: 1 },
+              ],
+              finalize_steps: [],
+            },
+          ],
+        },
+      ],
+      isLoading: false,
+      error: null,
+    });
+    render(
+      <MemoryRouter initialEntries={['/operations/automations']}>
+        <AutomationsPage />
+      </MemoryRouter>
+    );
+
+    fireEvent.mouseOver(screen.getByText('Running'));
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Rolling back. Why: Error setting up listener: setup bind (on node03)'
+    );
   });
 });
 
