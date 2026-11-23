@@ -11884,3 +11884,810 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = AbandonOperationResponseValidationError{}
+
+// Validate checks the field values on WriterHoldConflict with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *WriterHoldConflict) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on WriterHoldConflict with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// WriterHoldConflictMultiError, or nil if none found.
+func (m *WriterHoldConflict) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *WriterHoldConflict) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for HolderOperationId
+
+	// no validation rules for HolderMode
+
+	// no validation rules for RequestedMode
+
+	if len(errors) > 0 {
+		return WriterHoldConflictMultiError(errors)
+	}
+
+	return nil
+}
+
+// WriterHoldConflictMultiError is an error wrapping multiple validation errors
+// returned by WriterHoldConflict.ValidateAll() if the designated constraints
+// aren't met.
+type WriterHoldConflictMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m WriterHoldConflictMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m WriterHoldConflictMultiError) AllErrors() []error { return m }
+
+// WriterHoldConflictValidationError is the validation error returned by
+// WriterHoldConflict.Validate if the designated constraints aren't met.
+type WriterHoldConflictValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e WriterHoldConflictValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e WriterHoldConflictValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e WriterHoldConflictValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e WriterHoldConflictValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e WriterHoldConflictValidationError) ErrorName() string {
+	return "WriterHoldConflictValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e WriterHoldConflictValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sWriterHoldConflict.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = WriterHoldConflictValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = WriterHoldConflictValidationError{}
+
+// Validate checks the field values on AcquireWriterHoldRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *AcquireWriterHoldRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on AcquireWriterHoldRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// AcquireWriterHoldRequestMultiError, or nil if none found.
+func (m *AcquireWriterHoldRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *AcquireWriterHoldRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetJobId()) < 1 {
+		err := AcquireWriterHoldRequestValidationError{
+			field:  "JobId",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if m.GetDeadline() == nil {
+		err := AcquireWriterHoldRequestValidationError{
+			field:  "Deadline",
+			reason: "value is required",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return AcquireWriterHoldRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// AcquireWriterHoldRequestMultiError is an error wrapping multiple validation
+// errors returned by AcquireWriterHoldRequest.ValidateAll() if the designated
+// constraints aren't met.
+type AcquireWriterHoldRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m AcquireWriterHoldRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m AcquireWriterHoldRequestMultiError) AllErrors() []error { return m }
+
+// AcquireWriterHoldRequestValidationError is the validation error returned by
+// AcquireWriterHoldRequest.Validate if the designated constraints aren't met.
+type AcquireWriterHoldRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e AcquireWriterHoldRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e AcquireWriterHoldRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e AcquireWriterHoldRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e AcquireWriterHoldRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e AcquireWriterHoldRequestValidationError) ErrorName() string {
+	return "AcquireWriterHoldRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e AcquireWriterHoldRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sAcquireWriterHoldRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = AcquireWriterHoldRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = AcquireWriterHoldRequestValidationError{}
+
+// Validate checks the field values on AcquireWriterHoldResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *AcquireWriterHoldResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on AcquireWriterHoldResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// AcquireWriterHoldResponseMultiError, or nil if none found.
+func (m *AcquireWriterHoldResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *AcquireWriterHoldResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Acquired
+
+	if all {
+		switch v := interface{}(m.GetConflict()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, AcquireWriterHoldResponseValidationError{
+					field:  "Conflict",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, AcquireWriterHoldResponseValidationError{
+					field:  "Conflict",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetConflict()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return AcquireWriterHoldResponseValidationError{
+				field:  "Conflict",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return AcquireWriterHoldResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// AcquireWriterHoldResponseMultiError is an error wrapping multiple validation
+// errors returned by AcquireWriterHoldResponse.ValidateAll() if the
+// designated constraints aren't met.
+type AcquireWriterHoldResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m AcquireWriterHoldResponseMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m AcquireWriterHoldResponseMultiError) AllErrors() []error { return m }
+
+// AcquireWriterHoldResponseValidationError is the validation error returned by
+// AcquireWriterHoldResponse.Validate if the designated constraints aren't met.
+type AcquireWriterHoldResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e AcquireWriterHoldResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e AcquireWriterHoldResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e AcquireWriterHoldResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e AcquireWriterHoldResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e AcquireWriterHoldResponseValidationError) ErrorName() string {
+	return "AcquireWriterHoldResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e AcquireWriterHoldResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sAcquireWriterHoldResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = AcquireWriterHoldResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = AcquireWriterHoldResponseValidationError{}
+
+// Validate checks the field values on HeartbeatWriterHoldRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *HeartbeatWriterHoldRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on HeartbeatWriterHoldRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// HeartbeatWriterHoldRequestMultiError, or nil if none found.
+func (m *HeartbeatWriterHoldRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *HeartbeatWriterHoldRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetJobId()) < 1 {
+		err := HeartbeatWriterHoldRequestValidationError{
+			field:  "JobId",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if m.GetDeadline() == nil {
+		err := HeartbeatWriterHoldRequestValidationError{
+			field:  "Deadline",
+			reason: "value is required",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return HeartbeatWriterHoldRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// HeartbeatWriterHoldRequestMultiError is an error wrapping multiple
+// validation errors returned by HeartbeatWriterHoldRequest.ValidateAll() if
+// the designated constraints aren't met.
+type HeartbeatWriterHoldRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m HeartbeatWriterHoldRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m HeartbeatWriterHoldRequestMultiError) AllErrors() []error { return m }
+
+// HeartbeatWriterHoldRequestValidationError is the validation error returned
+// by HeartbeatWriterHoldRequest.Validate if the designated constraints aren't met.
+type HeartbeatWriterHoldRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e HeartbeatWriterHoldRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e HeartbeatWriterHoldRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e HeartbeatWriterHoldRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e HeartbeatWriterHoldRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e HeartbeatWriterHoldRequestValidationError) ErrorName() string {
+	return "HeartbeatWriterHoldRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e HeartbeatWriterHoldRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sHeartbeatWriterHoldRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = HeartbeatWriterHoldRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = HeartbeatWriterHoldRequestValidationError{}
+
+// Validate checks the field values on HeartbeatWriterHoldResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *HeartbeatWriterHoldResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on HeartbeatWriterHoldResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// HeartbeatWriterHoldResponseMultiError, or nil if none found.
+func (m *HeartbeatWriterHoldResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *HeartbeatWriterHoldResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if len(errors) > 0 {
+		return HeartbeatWriterHoldResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// HeartbeatWriterHoldResponseMultiError is an error wrapping multiple
+// validation errors returned by HeartbeatWriterHoldResponse.ValidateAll() if
+// the designated constraints aren't met.
+type HeartbeatWriterHoldResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m HeartbeatWriterHoldResponseMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m HeartbeatWriterHoldResponseMultiError) AllErrors() []error { return m }
+
+// HeartbeatWriterHoldResponseValidationError is the validation error returned
+// by HeartbeatWriterHoldResponse.Validate if the designated constraints
+// aren't met.
+type HeartbeatWriterHoldResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e HeartbeatWriterHoldResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e HeartbeatWriterHoldResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e HeartbeatWriterHoldResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e HeartbeatWriterHoldResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e HeartbeatWriterHoldResponseValidationError) ErrorName() string {
+	return "HeartbeatWriterHoldResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e HeartbeatWriterHoldResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sHeartbeatWriterHoldResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = HeartbeatWriterHoldResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = HeartbeatWriterHoldResponseValidationError{}
+
+// Validate checks the field values on ReleaseWriterHoldRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ReleaseWriterHoldRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ReleaseWriterHoldRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ReleaseWriterHoldRequestMultiError, or nil if none found.
+func (m *ReleaseWriterHoldRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ReleaseWriterHoldRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetJobId()) < 1 {
+		err := ReleaseWriterHoldRequestValidationError{
+			field:  "JobId",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return ReleaseWriterHoldRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// ReleaseWriterHoldRequestMultiError is an error wrapping multiple validation
+// errors returned by ReleaseWriterHoldRequest.ValidateAll() if the designated
+// constraints aren't met.
+type ReleaseWriterHoldRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ReleaseWriterHoldRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ReleaseWriterHoldRequestMultiError) AllErrors() []error { return m }
+
+// ReleaseWriterHoldRequestValidationError is the validation error returned by
+// ReleaseWriterHoldRequest.Validate if the designated constraints aren't met.
+type ReleaseWriterHoldRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ReleaseWriterHoldRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ReleaseWriterHoldRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ReleaseWriterHoldRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ReleaseWriterHoldRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ReleaseWriterHoldRequestValidationError) ErrorName() string {
+	return "ReleaseWriterHoldRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ReleaseWriterHoldRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sReleaseWriterHoldRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ReleaseWriterHoldRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ReleaseWriterHoldRequestValidationError{}
+
+// Validate checks the field values on ReleaseWriterHoldResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ReleaseWriterHoldResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ReleaseWriterHoldResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ReleaseWriterHoldResponseMultiError, or nil if none found.
+func (m *ReleaseWriterHoldResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ReleaseWriterHoldResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if len(errors) > 0 {
+		return ReleaseWriterHoldResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// ReleaseWriterHoldResponseMultiError is an error wrapping multiple validation
+// errors returned by ReleaseWriterHoldResponse.ValidateAll() if the
+// designated constraints aren't met.
+type ReleaseWriterHoldResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ReleaseWriterHoldResponseMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ReleaseWriterHoldResponseMultiError) AllErrors() []error { return m }
+
+// ReleaseWriterHoldResponseValidationError is the validation error returned by
+// ReleaseWriterHoldResponse.Validate if the designated constraints aren't met.
+type ReleaseWriterHoldResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ReleaseWriterHoldResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ReleaseWriterHoldResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ReleaseWriterHoldResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ReleaseWriterHoldResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ReleaseWriterHoldResponseValidationError) ErrorName() string {
+	return "ReleaseWriterHoldResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ReleaseWriterHoldResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sReleaseWriterHoldResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ReleaseWriterHoldResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ReleaseWriterHoldResponseValidationError{}

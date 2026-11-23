@@ -83,6 +83,9 @@ var rules = map[string]role{
 	"/om.v1.OmService/CancelOperation":               admin,
 	"/om.v1.OmService/ResumeOperation":               admin,
 	"/om.v1.OmService/AbandonOperation":              admin,
+	"/om.v1.OmService/AcquireWriterHold":             admin,
+	"/om.v1.OmService/HeartbeatWriterHold":           admin,
+	"/om.v1.OmService/ReleaseWriterHold":             admin,
 
 	// Advisor check authoring and testing; see methodRules.
 	"/advisors.v1.AdvisorService/CreateAdvisorCheck": admin,
@@ -187,6 +190,9 @@ var methodRules = map[string]role{
 
 	// OM operation actions are colon verbs under /v1/om/operations/, whose GET reads are viewer.
 	http.MethodPost + " /v1/om/operations/": admin,
+
+	// OM writer-hold acquire/heartbeat/release, for external PBM writers taking Operations locks.
+	http.MethodPost + " /v1/om/writerHolds": admin,
 }
 
 var lbacPrefixes = []string{

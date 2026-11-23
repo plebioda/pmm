@@ -6613,6 +6613,364 @@ func (x *AbandonOperationResponse) GetOperation() *Operation {
 	return nil
 }
 
+// WriterHoldConflict names the Operations holder a writer-hold acquire lost to.
+type WriterHoldConflict struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The operation already holding a conflicting lock.
+	HolderOperationId string `protobuf:"bytes,1,opt,name=holder_operation_id,json=holderOperationId,proto3" json:"holder_operation_id,omitempty"`
+	// The mode the holder holds.
+	HolderMode string `protobuf:"bytes,2,opt,name=holder_mode,json=holderMode,proto3" json:"holder_mode,omitempty"`
+	// The mode the writer requested.
+	RequestedMode string `protobuf:"bytes,3,opt,name=requested_mode,json=requestedMode,proto3" json:"requested_mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WriterHoldConflict) Reset() {
+	*x = WriterHoldConflict{}
+	mi := &file_om_v1_om_proto_msgTypes[84]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WriterHoldConflict) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WriterHoldConflict) ProtoMessage() {}
+
+func (x *WriterHoldConflict) ProtoReflect() protoreflect.Message {
+	mi := &file_om_v1_om_proto_msgTypes[84]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WriterHoldConflict.ProtoReflect.Descriptor instead.
+func (*WriterHoldConflict) Descriptor() ([]byte, []int) {
+	return file_om_v1_om_proto_rawDescGZIP(), []int{84}
+}
+
+func (x *WriterHoldConflict) GetHolderOperationId() string {
+	if x != nil {
+		return x.HolderOperationId
+	}
+	return ""
+}
+
+func (x *WriterHoldConflict) GetHolderMode() string {
+	if x != nil {
+		return x.HolderMode
+	}
+	return ""
+}
+
+func (x *WriterHoldConflict) GetRequestedMode() string {
+	if x != nil {
+		return x.RequestedMode
+	}
+	return ""
+}
+
+// AcquireWriterHoldRequest asks for the locks a PBM-writing backup needs on a managed member.
+type AcquireWriterHoldRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The backup job's durable id; a retry under the same id reuses the hold.
+	JobId string `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	// The PMM service ids the writer acts on; only those that are live managed-cluster members are locked.
+	ServiceIds []string `protobuf:"bytes,2,rep,name=service_ids,json=serviceIds,proto3" json:"service_ids,omitempty"`
+	// When the hold's lease lapses unless heartbeated.
+	Deadline      *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=deadline,proto3" json:"deadline,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AcquireWriterHoldRequest) Reset() {
+	*x = AcquireWriterHoldRequest{}
+	mi := &file_om_v1_om_proto_msgTypes[85]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AcquireWriterHoldRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AcquireWriterHoldRequest) ProtoMessage() {}
+
+func (x *AcquireWriterHoldRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_om_v1_om_proto_msgTypes[85]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AcquireWriterHoldRequest.ProtoReflect.Descriptor instead.
+func (*AcquireWriterHoldRequest) Descriptor() ([]byte, []int) {
+	return file_om_v1_om_proto_rawDescGZIP(), []int{85}
+}
+
+func (x *AcquireWriterHoldRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *AcquireWriterHoldRequest) GetServiceIds() []string {
+	if x != nil {
+		return x.ServiceIds
+	}
+	return nil
+}
+
+func (x *AcquireWriterHoldRequest) GetDeadline() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Deadline
+	}
+	return nil
+}
+
+// AcquireWriterHoldResponse reports whether the locks were taken, or who holds them.
+type AcquireWriterHoldResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Whether the cluster and member locks were taken; false with no conflict means no service is a managed member.
+	Acquired bool `protobuf:"varint,1,opt,name=acquired,proto3" json:"acquired,omitempty"`
+	// The holder when the acquire lost a conflict; unset otherwise.
+	Conflict      *WriterHoldConflict `protobuf:"bytes,2,opt,name=conflict,proto3" json:"conflict,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AcquireWriterHoldResponse) Reset() {
+	*x = AcquireWriterHoldResponse{}
+	mi := &file_om_v1_om_proto_msgTypes[86]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AcquireWriterHoldResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AcquireWriterHoldResponse) ProtoMessage() {}
+
+func (x *AcquireWriterHoldResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_om_v1_om_proto_msgTypes[86]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AcquireWriterHoldResponse.ProtoReflect.Descriptor instead.
+func (*AcquireWriterHoldResponse) Descriptor() ([]byte, []int) {
+	return file_om_v1_om_proto_rawDescGZIP(), []int{86}
+}
+
+func (x *AcquireWriterHoldResponse) GetAcquired() bool {
+	if x != nil {
+		return x.Acquired
+	}
+	return false
+}
+
+func (x *AcquireWriterHoldResponse) GetConflict() *WriterHoldConflict {
+	if x != nil {
+		return x.Conflict
+	}
+	return nil
+}
+
+// HeartbeatWriterHoldRequest extends a hold's lease.
+type HeartbeatWriterHoldRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The backup job whose hold to extend.
+	JobId string `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	// The new lease deadline.
+	Deadline      *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=deadline,proto3" json:"deadline,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HeartbeatWriterHoldRequest) Reset() {
+	*x = HeartbeatWriterHoldRequest{}
+	mi := &file_om_v1_om_proto_msgTypes[87]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HeartbeatWriterHoldRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HeartbeatWriterHoldRequest) ProtoMessage() {}
+
+func (x *HeartbeatWriterHoldRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_om_v1_om_proto_msgTypes[87]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HeartbeatWriterHoldRequest.ProtoReflect.Descriptor instead.
+func (*HeartbeatWriterHoldRequest) Descriptor() ([]byte, []int) {
+	return file_om_v1_om_proto_rawDescGZIP(), []int{87}
+}
+
+func (x *HeartbeatWriterHoldRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *HeartbeatWriterHoldRequest) GetDeadline() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Deadline
+	}
+	return nil
+}
+
+// HeartbeatWriterHoldResponse is empty.
+type HeartbeatWriterHoldResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HeartbeatWriterHoldResponse) Reset() {
+	*x = HeartbeatWriterHoldResponse{}
+	mi := &file_om_v1_om_proto_msgTypes[88]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HeartbeatWriterHoldResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HeartbeatWriterHoldResponse) ProtoMessage() {}
+
+func (x *HeartbeatWriterHoldResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_om_v1_om_proto_msgTypes[88]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HeartbeatWriterHoldResponse.ProtoReflect.Descriptor instead.
+func (*HeartbeatWriterHoldResponse) Descriptor() ([]byte, []int) {
+	return file_om_v1_om_proto_rawDescGZIP(), []int{88}
+}
+
+// ReleaseWriterHoldRequest releases a hold on the backup job's terminal result.
+type ReleaseWriterHoldRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The backup job whose hold to release; a no-op once released.
+	JobId         string `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReleaseWriterHoldRequest) Reset() {
+	*x = ReleaseWriterHoldRequest{}
+	mi := &file_om_v1_om_proto_msgTypes[89]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseWriterHoldRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseWriterHoldRequest) ProtoMessage() {}
+
+func (x *ReleaseWriterHoldRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_om_v1_om_proto_msgTypes[89]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseWriterHoldRequest.ProtoReflect.Descriptor instead.
+func (*ReleaseWriterHoldRequest) Descriptor() ([]byte, []int) {
+	return file_om_v1_om_proto_rawDescGZIP(), []int{89}
+}
+
+func (x *ReleaseWriterHoldRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+// ReleaseWriterHoldResponse is empty.
+type ReleaseWriterHoldResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReleaseWriterHoldResponse) Reset() {
+	*x = ReleaseWriterHoldResponse{}
+	mi := &file_om_v1_om_proto_msgTypes[90]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseWriterHoldResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseWriterHoldResponse) ProtoMessage() {}
+
+func (x *ReleaseWriterHoldResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_om_v1_om_proto_msgTypes[90]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseWriterHoldResponse.ProtoReflect.Descriptor instead.
+func (*ReleaseWriterHoldResponse) Descriptor() ([]byte, []int) {
+	return file_om_v1_om_proto_rawDescGZIP(), []int{90}
+}
+
 var File_om_v1_om_proto protoreflect.FileDescriptor
 
 const file_om_v1_om_proto_rawDesc = "" +
@@ -7148,7 +7506,27 @@ const file_om_v1_om_proto_rawDesc = "" +
 	"\foperation_id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\voperationId\x12!\n" +
 	"\aversion\x18\x02 \x01(\x05B\a\xfaB\x04\x1a\x02(\x01R\aversion\"J\n" +
 	"\x18AbandonOperationResponse\x12.\n" +
-	"\toperation\x18\x01 \x01(\v2\x10.om.v1.OperationR\toperation*_\n" +
+	"\toperation\x18\x01 \x01(\v2\x10.om.v1.OperationR\toperation\"\x8c\x01\n" +
+	"\x12WriterHoldConflict\x12.\n" +
+	"\x13holder_operation_id\x18\x01 \x01(\tR\x11holderOperationId\x12\x1f\n" +
+	"\vholder_mode\x18\x02 \x01(\tR\n" +
+	"holderMode\x12%\n" +
+	"\x0erequested_mode\x18\x03 \x01(\tR\rrequestedMode\"\x9d\x01\n" +
+	"\x18AcquireWriterHoldRequest\x12\x1e\n" +
+	"\x06job_id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x05jobId\x12\x1f\n" +
+	"\vservice_ids\x18\x02 \x03(\tR\n" +
+	"serviceIds\x12@\n" +
+	"\bdeadline\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\b\xfaB\x05\xb2\x01\x02\b\x01R\bdeadline\"n\n" +
+	"\x19AcquireWriterHoldResponse\x12\x1a\n" +
+	"\bacquired\x18\x01 \x01(\bR\bacquired\x125\n" +
+	"\bconflict\x18\x02 \x01(\v2\x19.om.v1.WriterHoldConflictR\bconflict\"~\n" +
+	"\x1aHeartbeatWriterHoldRequest\x12\x1e\n" +
+	"\x06job_id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x05jobId\x12@\n" +
+	"\bdeadline\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampB\b\xfaB\x05\xb2\x01\x02\b\x01R\bdeadline\"\x1d\n" +
+	"\x1bHeartbeatWriterHoldResponse\":\n" +
+	"\x18ReleaseWriterHoldRequest\x12\x1e\n" +
+	"\x06job_id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x05jobId\"\x1b\n" +
+	"\x19ReleaseWriterHoldResponse*_\n" +
 	"\rServiceStatus\x12\x1e\n" +
 	"\x1aSERVICE_STATUS_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SERVICE_STATUS_UP\x10\x01\x12\x17\n" +
@@ -7194,7 +7572,7 @@ const file_om_v1_om_proto_rawDesc = "" +
 	"\x1dOM_SETTING_SOURCE_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19OM_SETTING_SOURCE_CLUSTER\x10\x01\x12\x1c\n" +
 	"\x18OM_SETTING_SOURCE_GLOBAL\x10\x02\x12\x1d\n" +
-	"\x19OM_SETTING_SOURCE_DEFAULT\x10\x032\xb2E\n" +
+	"\x19OM_SETTING_SOURCE_DEFAULT\x10\x032\xeeM\n" +
 	"\tOmService\x12\x89\x02\n" +
 	"\vGetTopology\x12\x19.om.v1.GetTopologyRequest\x1a\x1a.om.v1.GetTopologyResponse\"\xc2\x01\x92A\xa7\x01\x12\x18Get the MongoDB topology\x1a\x8a\x01Returns every monitored MongoDB service, grouped by environment then cluster, with its identity, replica-set state, reachability and load.\x82\xd3\xe4\x93\x02\x11\x12\x0f/v1/om/topology\x12\xee\x01\n" +
 	"\x10ListTopologyRuns\x12\x1e.om.v1.ListTopologyRunsRequest\x1a\x1f.om.v1.ListTopologyRunsResponse\"\x98\x01\x92Ay\x12\x14List collection runs\x1aaReturns the recorded collection runs, newest first, with what each one saw and any errors it hit.\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/om/topology/runs\x12\xf7\x01\n" +
@@ -7224,7 +7602,10 @@ const file_om_v1_om_proto_rawDesc = "" +
 	"\x10ConfirmOperation\x12\x1e.om.v1.ConfirmOperationRequest\x1a\x1f.om.v1.ConfirmOperationResponse\"\xf2\x01\x92A\xbb\x01\x12\x14Confirm an operation\x1a\xa2\x01Releases an operation awaiting confirmation to run, binding the reviewed plan by version: a rescan or other change since the review moves nothing and returns 409.\x82\xd3\xe4\x93\x02-:\x01*\"(/v1/om/operations/{operation_id}:confirm\x12\xc0\x02\n" +
 	"\x0fCancelOperation\x12\x1d.om.v1.CancelOperationRequest\x1a\x1e.om.v1.CancelOperationResponse\"\xed\x01\x92A\xb7\x01\x12\x13Cancel an operation\x1a\x9f\x01Cancels a pre-running operation outright, releasing its locks; a running operation whose kind allows it goes to cancelling for compensation. Fenced by version.\x82\xd3\xe4\x93\x02,:\x01*\"'/v1/om/operations/{operation_id}:cancel\x12\xd9\x02\n" +
 	"\x0fResumeOperation\x12\x1d.om.v1.ResumeOperationRequest\x1a\x1e.om.v1.ResumeOperationResponse\"\x86\x02\x92A\xd0\x01\x12\x13Resume an operation\x1a\xb8\x01Returns a failed, resumable operation to running, keeping the locks it held and clearing the attention it raised. Refused when the kind's contract version has moved. Fenced by version.\x82\xd3\xe4\x93\x02,:\x01*\"'/v1/om/operations/{operation_id}:resume\x12\xbb\x02\n" +
-	"\x10AbandonOperation\x12\x1e.om.v1.AbandonOperationRequest\x1a\x1f.om.v1.AbandonOperationResponse\"\xe5\x01\x92A\xae\x01\x12\x14Abandon an operation\x1a\x95\x01Resolves a failed operation that will not be resumed: releases its locks and clears the attention it raised, leaving it abandoned. Fenced by version.\x82\xd3\xe4\x93\x02-:\x01*\"(/v1/om/operations/{operation_id}:abandonBp\n" +
+	"\x10AbandonOperation\x12\x1e.om.v1.AbandonOperationRequest\x1a\x1f.om.v1.AbandonOperationResponse\"\xe5\x01\x92A\xae\x01\x12\x14Abandon an operation\x1a\x95\x01Resolves a failed operation that will not be resumed: releases its locks and clears the attention it raised, leaving it abandoned. Fenced by version.\x82\xd3\xe4\x93\x02-:\x01*\"(/v1/om/operations/{operation_id}:abandon\x12\xcc\x03\n" +
+	"\x11AcquireWriterHold\x12\x1f.om.v1.AcquireWriterHoldRequest\x1a .om.v1.AcquireWriterHoldResponse\"\xf3\x02\x92A\xca\x02\x12\x15Acquire a writer hold\x1a\xb0\x02Takes the cluster and affected-member locks a PBM-writing backup needs before it acts on a managed cluster's members, committed before the action and keyed by the job id. Idempotent per job id. Returns acquired=false with no conflict when no service is a managed member; returns the holder on a conflict.\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/v1/om/writerHolds:acquire\x12\x93\x02\n" +
+	"\x13HeartbeatWriterHold\x12!.om.v1.HeartbeatWriterHoldRequest\x1a\".om.v1.HeartbeatWriterHoldResponse\"\xb4\x01\x92A\x89\x01\x12\x17Heartbeat a writer hold\x1anExtends a writer hold's lease to a new deadline so the reaper does not reclaim a still-running backup's locks.\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/om/writerHolds:heartbeat\x12\xd4\x02\n" +
+	"\x11ReleaseWriterHold\x12\x1f.om.v1.ReleaseWriterHoldRequest\x1a .om.v1.ReleaseWriterHoldResponse\"\xfb\x01\x92A\xd2\x01\x12\x15Release a writer hold\x1a\xb8\x01Drops a writer hold's locks and finalises it. A no-op once released; the reaper reclaims a hold the writer never releases only after its lease lapses and PBM confirms the job terminal.\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/v1/om/writerHolds:releaseBp\n" +
 	"\tcom.om.v1B\aOmProtoP\x01Z%github.com/percona/pmm/api/om/v1;omv1\xa2\x02\x03OXX\xaa\x02\x05Om.V1\xca\x02\x05Om\\V1\xe2\x02\x11Om\\V1\\GPBMetadata\xea\x02\x06Om::V1b\x06proto3"
 
 var (
@@ -7241,7 +7622,7 @@ func file_om_v1_om_proto_rawDescGZIP() []byte {
 
 var (
 	file_om_v1_om_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
-	file_om_v1_om_proto_msgTypes  = make([]protoimpl.MessageInfo, 87)
+	file_om_v1_om_proto_msgTypes  = make([]protoimpl.MessageInfo, 94)
 	file_om_v1_om_proto_goTypes   = []any{
 		ServiceStatus(0),                              // 0: om.v1.ServiceStatus
 		ProcessRole(0),                                // 1: om.v1.ProcessRole
@@ -7336,99 +7717,106 @@ var (
 		(*ResumeOperationResponse)(nil),               // 90: om.v1.ResumeOperationResponse
 		(*AbandonOperationRequest)(nil),               // 91: om.v1.AbandonOperationRequest
 		(*AbandonOperationResponse)(nil),              // 92: om.v1.AbandonOperationResponse
-		nil,                                           // 93: om.v1.Summary.ProcessRoleCountsEntry
-		nil,                                           // 94: om.v1.SourceReport.DetailEntry
-		nil,                                           // 95: om.v1.TriggerHostBootstrapRequest.MemberConfigsEntry
-		(*timestamppb.Timestamp)(nil),                 // 96: google.protobuf.Timestamp
-		(*structpb.Struct)(nil),                       // 97: google.protobuf.Struct
-		(*structpb.Value)(nil),                        // 98: google.protobuf.Value
+		(*WriterHoldConflict)(nil),                    // 93: om.v1.WriterHoldConflict
+		(*AcquireWriterHoldRequest)(nil),              // 94: om.v1.AcquireWriterHoldRequest
+		(*AcquireWriterHoldResponse)(nil),             // 95: om.v1.AcquireWriterHoldResponse
+		(*HeartbeatWriterHoldRequest)(nil),            // 96: om.v1.HeartbeatWriterHoldRequest
+		(*HeartbeatWriterHoldResponse)(nil),           // 97: om.v1.HeartbeatWriterHoldResponse
+		(*ReleaseWriterHoldRequest)(nil),              // 98: om.v1.ReleaseWriterHoldRequest
+		(*ReleaseWriterHoldResponse)(nil),             // 99: om.v1.ReleaseWriterHoldResponse
+		nil,                                           // 100: om.v1.Summary.ProcessRoleCountsEntry
+		nil,                                           // 101: om.v1.SourceReport.DetailEntry
+		nil,                                           // 102: om.v1.TriggerHostBootstrapRequest.MemberConfigsEntry
+		(*timestamppb.Timestamp)(nil),                 // 103: google.protobuf.Timestamp
+		(*structpb.Struct)(nil),                       // 104: google.protobuf.Struct
+		(*structpb.Value)(nil),                        // 105: google.protobuf.Value
 	}
 )
 
 var file_om_v1_om_proto_depIdxs = []int32{
 	0,   // 0: om.v1.TopologyService.status:type_name -> om.v1.ServiceStatus
 	1,   // 1: om.v1.TopologyService.process_role:type_name -> om.v1.ProcessRole
-	96,  // 2: om.v1.TopologyService.observed_at:type_name -> google.protobuf.Timestamp
-	96,  // 3: om.v1.TopologyService.last_up_at:type_name -> google.protobuf.Timestamp
+	103, // 2: om.v1.TopologyService.observed_at:type_name -> google.protobuf.Timestamp
+	103, // 3: om.v1.TopologyService.last_up_at:type_name -> google.protobuf.Timestamp
 	9,   // 4: om.v1.Cluster.services:type_name -> om.v1.TopologyService
 	4,   // 5: om.v1.Cluster.type:type_name -> om.v1.ClusterType
 	5,   // 6: om.v1.Cluster.health:type_name -> om.v1.ClusterHealth
 	10,  // 7: om.v1.Environment.clusters:type_name -> om.v1.Cluster
-	93,  // 8: om.v1.Summary.process_role_counts:type_name -> om.v1.Summary.ProcessRoleCountsEntry
-	96,  // 9: om.v1.Snapshot.generated_at:type_name -> google.protobuf.Timestamp
-	96,  // 10: om.v1.Snapshot.observed_at:type_name -> google.protobuf.Timestamp
+	100, // 8: om.v1.Summary.process_role_counts:type_name -> om.v1.Summary.ProcessRoleCountsEntry
+	103, // 9: om.v1.Snapshot.generated_at:type_name -> google.protobuf.Timestamp
+	103, // 10: om.v1.Snapshot.observed_at:type_name -> google.protobuf.Timestamp
 	13,  // 11: om.v1.GetTopologyResponse.snapshot:type_name -> om.v1.Snapshot
 	12,  // 12: om.v1.GetTopologyResponse.summary:type_name -> om.v1.Summary
 	11,  // 13: om.v1.GetTopologyResponse.environments:type_name -> om.v1.Environment
 	3,   // 14: om.v1.SourceReport.status:type_name -> om.v1.SourceStatus
-	94,  // 15: om.v1.SourceReport.detail:type_name -> om.v1.SourceReport.DetailEntry
+	101, // 15: om.v1.SourceReport.detail:type_name -> om.v1.SourceReport.DetailEntry
 	2,   // 16: om.v1.TopologyRun.status:type_name -> om.v1.RunStatus
-	96,  // 17: om.v1.TopologyRun.start_time:type_name -> google.protobuf.Timestamp
-	96,  // 18: om.v1.TopologyRun.end_time:type_name -> google.protobuf.Timestamp
+	103, // 17: om.v1.TopologyRun.start_time:type_name -> google.protobuf.Timestamp
+	103, // 18: om.v1.TopologyRun.end_time:type_name -> google.protobuf.Timestamp
 	16,  // 19: om.v1.TopologyRun.counts:type_name -> om.v1.TopologyRunCounts
 	18,  // 20: om.v1.TopologyRun.errors:type_name -> om.v1.TopologyRunError
 	17,  // 21: om.v1.TopologyRun.sources:type_name -> om.v1.SourceReport
 	19,  // 22: om.v1.GetTopologyRunResponse.run:type_name -> om.v1.TopologyRun
 	19,  // 23: om.v1.ListTopologyRunsResponse.runs:type_name -> om.v1.TopologyRun
 	2,   // 24: om.v1.TriggerTopologyCollectionResponse.status:type_name -> om.v1.RunStatus
-	96,  // 25: om.v1.TriggerTopologyCollectionResponse.start_time:type_name -> google.protobuf.Timestamp
-	96,  // 26: om.v1.InventoryFreshness.first_seen_at:type_name -> google.protobuf.Timestamp
-	96,  // 27: om.v1.InventoryFreshness.last_attempt_at:type_name -> google.protobuf.Timestamp
-	96,  // 28: om.v1.InventoryFreshness.last_success_at:type_name -> google.protobuf.Timestamp
-	96,  // 29: om.v1.InventoryFreshness.failing_since:type_name -> google.protobuf.Timestamp
-	97,  // 30: om.v1.InventoryService.observed:type_name -> google.protobuf.Struct
+	103, // 25: om.v1.TriggerTopologyCollectionResponse.start_time:type_name -> google.protobuf.Timestamp
+	103, // 26: om.v1.InventoryFreshness.first_seen_at:type_name -> google.protobuf.Timestamp
+	103, // 27: om.v1.InventoryFreshness.last_attempt_at:type_name -> google.protobuf.Timestamp
+	103, // 28: om.v1.InventoryFreshness.last_success_at:type_name -> google.protobuf.Timestamp
+	103, // 29: om.v1.InventoryFreshness.failing_since:type_name -> google.protobuf.Timestamp
+	104, // 30: om.v1.InventoryService.observed:type_name -> google.protobuf.Struct
 	28,  // 31: om.v1.InventoryService.freshness:type_name -> om.v1.InventoryFreshness
 	26,  // 32: om.v1.InventoryHost.executor:type_name -> om.v1.InventoryExecutor
 	27,  // 33: om.v1.InventoryHost.unregistered_mongods:type_name -> om.v1.UnregisteredMongod
-	97,  // 34: om.v1.InventoryHost.observed:type_name -> google.protobuf.Struct
+	104, // 34: om.v1.InventoryHost.observed:type_name -> google.protobuf.Struct
 	28,  // 35: om.v1.InventoryHost.freshness:type_name -> om.v1.InventoryFreshness
 	29,  // 36: om.v1.InventoryHost.services:type_name -> om.v1.InventoryService
 	6,   // 37: om.v1.InventoryRunEntity.resolution:type_name -> om.v1.ExecutorResolution
 	32,  // 38: om.v1.InventoryRunEntity.services:type_name -> om.v1.InventoryRunEntityService
 	2,   // 39: om.v1.InventoryRun.status:type_name -> om.v1.RunStatus
-	96,  // 40: om.v1.InventoryRun.start_time:type_name -> google.protobuf.Timestamp
-	96,  // 41: om.v1.InventoryRun.end_time:type_name -> google.protobuf.Timestamp
+	103, // 40: om.v1.InventoryRun.start_time:type_name -> google.protobuf.Timestamp
+	103, // 41: om.v1.InventoryRun.end_time:type_name -> google.protobuf.Timestamp
 	31,  // 42: om.v1.InventoryRun.counts:type_name -> om.v1.InventoryRunCounts
 	35,  // 43: om.v1.InventoryRun.failing_nodes:type_name -> om.v1.InventoryRunFailingNode
-	98,  // 44: om.v1.InventorySetting.value:type_name -> google.protobuf.Value
-	98,  // 45: om.v1.InventorySetting.default_value:type_name -> google.protobuf.Value
+	105, // 44: om.v1.InventorySetting.value:type_name -> google.protobuf.Value
+	105, // 45: om.v1.InventorySetting.default_value:type_name -> google.protobuf.Value
 	7,   // 46: om.v1.InventorySetting.reload:type_name -> om.v1.SettingReload
 	30,  // 47: om.v1.ListInventoryHostsResponse.hosts:type_name -> om.v1.InventoryHost
 	30,  // 48: om.v1.GetInventoryHostResponse.host:type_name -> om.v1.InventoryHost
 	29,  // 49: om.v1.ListInventoryServicesResponse.services:type_name -> om.v1.InventoryService
 	29,  // 50: om.v1.GetInventoryServiceResponse.service:type_name -> om.v1.InventoryService
-	96,  // 51: om.v1.ListInventoryRunsRequest.since:type_name -> google.protobuf.Timestamp
-	96,  // 52: om.v1.ListInventoryRunsRequest.until:type_name -> google.protobuf.Timestamp
+	103, // 51: om.v1.ListInventoryRunsRequest.since:type_name -> google.protobuf.Timestamp
+	103, // 52: om.v1.ListInventoryRunsRequest.until:type_name -> google.protobuf.Timestamp
 	34,  // 53: om.v1.ListInventoryRunsResponse.runs:type_name -> om.v1.InventoryRun
 	34,  // 54: om.v1.GetInventoryRunResponse.run:type_name -> om.v1.InventoryRun
 	33,  // 55: om.v1.GetInventoryRunResponse.entities:type_name -> om.v1.InventoryRunEntity
 	2,   // 56: om.v1.TriggerInventoryRefreshResponse.status:type_name -> om.v1.RunStatus
-	96,  // 57: om.v1.TriggerInventoryRefreshResponse.start_time:type_name -> google.protobuf.Timestamp
-	95,  // 58: om.v1.TriggerHostBootstrapRequest.member_configs:type_name -> om.v1.TriggerHostBootstrapRequest.MemberConfigsEntry
+	103, // 57: om.v1.TriggerInventoryRefreshResponse.start_time:type_name -> google.protobuf.Timestamp
+	102, // 58: om.v1.TriggerHostBootstrapRequest.member_configs:type_name -> om.v1.TriggerHostBootstrapRequest.MemberConfigsEntry
 	58,  // 59: om.v1.BootstrapHost.steps:type_name -> om.v1.BootstrapStep
 	58,  // 60: om.v1.BootstrapHost.rollback_steps:type_name -> om.v1.BootstrapStep
 	58,  // 61: om.v1.BootstrapHost.finalize_steps:type_name -> om.v1.BootstrapStep
 	59,  // 62: om.v1.GetBootstrapRunResponse.hosts:type_name -> om.v1.BootstrapHost
 	58,  // 63: om.v1.GetBootstrapRunResponse.run_steps:type_name -> om.v1.BootstrapStep
-	96,  // 64: om.v1.GetBootstrapRunResponse.started_at:type_name -> google.protobuf.Timestamp
-	96,  // 65: om.v1.GetBootstrapRunResponse.finished_at:type_name -> google.protobuf.Timestamp
+	103, // 64: om.v1.GetBootstrapRunResponse.started_at:type_name -> google.protobuf.Timestamp
+	103, // 65: om.v1.GetBootstrapRunResponse.finished_at:type_name -> google.protobuf.Timestamp
 	61,  // 66: om.v1.CancelBootstrapRunResponse.run:type_name -> om.v1.GetBootstrapRunResponse
 	61,  // 67: om.v1.ListBootstrapRunsResponse.runs:type_name -> om.v1.GetBootstrapRunResponse
 	36,  // 68: om.v1.GetInventoryConfigResponse.settings:type_name -> om.v1.InventorySetting
-	97,  // 69: om.v1.UpdateInventoryConfigRequest.values:type_name -> google.protobuf.Struct
+	104, // 69: om.v1.UpdateInventoryConfigRequest.values:type_name -> google.protobuf.Struct
 	36,  // 70: om.v1.UpdateInventoryConfigResponse.settings:type_name -> om.v1.InventorySetting
-	98,  // 71: om.v1.OmSetting.value:type_name -> google.protobuf.Value
+	105, // 71: om.v1.OmSetting.value:type_name -> google.protobuf.Value
 	8,   // 72: om.v1.OmSetting.source:type_name -> om.v1.OmSettingSource
 	72,  // 73: om.v1.GetSettingsResponse.settings:type_name -> om.v1.OmSetting
-	97,  // 74: om.v1.UpdateSettingsRequest.values:type_name -> google.protobuf.Struct
+	104, // 74: om.v1.UpdateSettingsRequest.values:type_name -> google.protobuf.Struct
 	72,  // 75: om.v1.UpdateSettingsResponse.settings:type_name -> om.v1.OmSetting
-	96,  // 76: om.v1.Operation.created_at:type_name -> google.protobuf.Timestamp
-	96,  // 77: om.v1.Operation.started_at:type_name -> google.protobuf.Timestamp
-	96,  // 78: om.v1.Operation.finished_at:type_name -> google.protobuf.Timestamp
-	96,  // 79: om.v1.Operation.not_before:type_name -> google.protobuf.Timestamp
-	96,  // 80: om.v1.Operation.deadline_at:type_name -> google.protobuf.Timestamp
-	96,  // 81: om.v1.OperationStep.dispatched_at:type_name -> google.protobuf.Timestamp
-	96,  // 82: om.v1.OperationStep.finished_at:type_name -> google.protobuf.Timestamp
+	103, // 76: om.v1.Operation.created_at:type_name -> google.protobuf.Timestamp
+	103, // 77: om.v1.Operation.started_at:type_name -> google.protobuf.Timestamp
+	103, // 78: om.v1.Operation.finished_at:type_name -> google.protobuf.Timestamp
+	103, // 79: om.v1.Operation.not_before:type_name -> google.protobuf.Timestamp
+	103, // 80: om.v1.Operation.deadline_at:type_name -> google.protobuf.Timestamp
+	103, // 81: om.v1.OperationStep.dispatched_at:type_name -> google.protobuf.Timestamp
+	103, // 82: om.v1.OperationStep.finished_at:type_name -> google.protobuf.Timestamp
 	79,  // 83: om.v1.ListOperationsResponse.operations:type_name -> om.v1.Operation
 	79,  // 84: om.v1.GetOperationResponse.operation:type_name -> om.v1.Operation
 	80,  // 85: om.v1.GetOperationResponse.steps:type_name -> om.v1.OperationStep
@@ -7436,70 +7824,79 @@ var file_om_v1_om_proto_depIdxs = []int32{
 	79,  // 87: om.v1.CancelOperationResponse.operation:type_name -> om.v1.Operation
 	79,  // 88: om.v1.ResumeOperationResponse.operation:type_name -> om.v1.Operation
 	79,  // 89: om.v1.AbandonOperationResponse.operation:type_name -> om.v1.Operation
-	56,  // 90: om.v1.TriggerHostBootstrapRequest.MemberConfigsEntry.value:type_name -> om.v1.BootstrapMemberConfig
-	14,  // 91: om.v1.OmService.GetTopology:input_type -> om.v1.GetTopologyRequest
-	22,  // 92: om.v1.OmService.ListTopologyRuns:input_type -> om.v1.ListTopologyRunsRequest
-	20,  // 93: om.v1.OmService.GetTopologyRun:input_type -> om.v1.GetTopologyRunRequest
-	24,  // 94: om.v1.OmService.TriggerTopologyCollection:input_type -> om.v1.TriggerTopologyCollectionRequest
-	37,  // 95: om.v1.OmService.ListInventoryHosts:input_type -> om.v1.ListInventoryHostsRequest
-	39,  // 96: om.v1.OmService.GetInventoryHost:input_type -> om.v1.GetInventoryHostRequest
-	41,  // 97: om.v1.OmService.DeleteInventoryHost:input_type -> om.v1.DeleteInventoryHostRequest
-	43,  // 98: om.v1.OmService.ListInventoryServices:input_type -> om.v1.ListInventoryServicesRequest
-	45,  // 99: om.v1.OmService.GetInventoryService:input_type -> om.v1.GetInventoryServiceRequest
-	47,  // 100: om.v1.OmService.DeleteInventoryService:input_type -> om.v1.DeleteInventoryServiceRequest
-	49,  // 101: om.v1.OmService.ListInventoryRuns:input_type -> om.v1.ListInventoryRunsRequest
-	51,  // 102: om.v1.OmService.GetInventoryRun:input_type -> om.v1.GetInventoryRunRequest
-	53,  // 103: om.v1.OmService.TriggerInventoryRefresh:input_type -> om.v1.TriggerInventoryRefreshRequest
-	55,  // 104: om.v1.OmService.TriggerHostBootstrap:input_type -> om.v1.TriggerHostBootstrapRequest
-	60,  // 105: om.v1.OmService.GetBootstrapRun:input_type -> om.v1.GetBootstrapRunRequest
-	64,  // 106: om.v1.OmService.ListBootstrapRuns:input_type -> om.v1.ListBootstrapRunsRequest
-	62,  // 107: om.v1.OmService.CancelBootstrapRun:input_type -> om.v1.CancelBootstrapRunRequest
-	66,  // 108: om.v1.OmService.GetInventoryConfig:input_type -> om.v1.GetInventoryConfigRequest
-	68,  // 109: om.v1.OmService.UpdateInventoryConfig:input_type -> om.v1.UpdateInventoryConfigRequest
-	70,  // 110: om.v1.OmService.DeleteInventoryConfigOverride:input_type -> om.v1.DeleteInventoryConfigOverrideRequest
-	73,  // 111: om.v1.OmService.GetSettings:input_type -> om.v1.GetSettingsRequest
-	75,  // 112: om.v1.OmService.UpdateSettings:input_type -> om.v1.UpdateSettingsRequest
-	77,  // 113: om.v1.OmService.DeleteSettingOverride:input_type -> om.v1.DeleteSettingOverrideRequest
-	81,  // 114: om.v1.OmService.ListOperations:input_type -> om.v1.ListOperationsRequest
-	83,  // 115: om.v1.OmService.GetOperation:input_type -> om.v1.GetOperationRequest
-	85,  // 116: om.v1.OmService.ConfirmOperation:input_type -> om.v1.ConfirmOperationRequest
-	87,  // 117: om.v1.OmService.CancelOperation:input_type -> om.v1.CancelOperationRequest
-	89,  // 118: om.v1.OmService.ResumeOperation:input_type -> om.v1.ResumeOperationRequest
-	91,  // 119: om.v1.OmService.AbandonOperation:input_type -> om.v1.AbandonOperationRequest
-	15,  // 120: om.v1.OmService.GetTopology:output_type -> om.v1.GetTopologyResponse
-	23,  // 121: om.v1.OmService.ListTopologyRuns:output_type -> om.v1.ListTopologyRunsResponse
-	21,  // 122: om.v1.OmService.GetTopologyRun:output_type -> om.v1.GetTopologyRunResponse
-	25,  // 123: om.v1.OmService.TriggerTopologyCollection:output_type -> om.v1.TriggerTopologyCollectionResponse
-	38,  // 124: om.v1.OmService.ListInventoryHosts:output_type -> om.v1.ListInventoryHostsResponse
-	40,  // 125: om.v1.OmService.GetInventoryHost:output_type -> om.v1.GetInventoryHostResponse
-	42,  // 126: om.v1.OmService.DeleteInventoryHost:output_type -> om.v1.DeleteInventoryHostResponse
-	44,  // 127: om.v1.OmService.ListInventoryServices:output_type -> om.v1.ListInventoryServicesResponse
-	46,  // 128: om.v1.OmService.GetInventoryService:output_type -> om.v1.GetInventoryServiceResponse
-	48,  // 129: om.v1.OmService.DeleteInventoryService:output_type -> om.v1.DeleteInventoryServiceResponse
-	50,  // 130: om.v1.OmService.ListInventoryRuns:output_type -> om.v1.ListInventoryRunsResponse
-	52,  // 131: om.v1.OmService.GetInventoryRun:output_type -> om.v1.GetInventoryRunResponse
-	54,  // 132: om.v1.OmService.TriggerInventoryRefresh:output_type -> om.v1.TriggerInventoryRefreshResponse
-	57,  // 133: om.v1.OmService.TriggerHostBootstrap:output_type -> om.v1.TriggerHostBootstrapResponse
-	61,  // 134: om.v1.OmService.GetBootstrapRun:output_type -> om.v1.GetBootstrapRunResponse
-	65,  // 135: om.v1.OmService.ListBootstrapRuns:output_type -> om.v1.ListBootstrapRunsResponse
-	63,  // 136: om.v1.OmService.CancelBootstrapRun:output_type -> om.v1.CancelBootstrapRunResponse
-	67,  // 137: om.v1.OmService.GetInventoryConfig:output_type -> om.v1.GetInventoryConfigResponse
-	69,  // 138: om.v1.OmService.UpdateInventoryConfig:output_type -> om.v1.UpdateInventoryConfigResponse
-	71,  // 139: om.v1.OmService.DeleteInventoryConfigOverride:output_type -> om.v1.DeleteInventoryConfigOverrideResponse
-	74,  // 140: om.v1.OmService.GetSettings:output_type -> om.v1.GetSettingsResponse
-	76,  // 141: om.v1.OmService.UpdateSettings:output_type -> om.v1.UpdateSettingsResponse
-	78,  // 142: om.v1.OmService.DeleteSettingOverride:output_type -> om.v1.DeleteSettingOverrideResponse
-	82,  // 143: om.v1.OmService.ListOperations:output_type -> om.v1.ListOperationsResponse
-	84,  // 144: om.v1.OmService.GetOperation:output_type -> om.v1.GetOperationResponse
-	86,  // 145: om.v1.OmService.ConfirmOperation:output_type -> om.v1.ConfirmOperationResponse
-	88,  // 146: om.v1.OmService.CancelOperation:output_type -> om.v1.CancelOperationResponse
-	90,  // 147: om.v1.OmService.ResumeOperation:output_type -> om.v1.ResumeOperationResponse
-	92,  // 148: om.v1.OmService.AbandonOperation:output_type -> om.v1.AbandonOperationResponse
-	120, // [120:149] is the sub-list for method output_type
-	91,  // [91:120] is the sub-list for method input_type
-	91,  // [91:91] is the sub-list for extension type_name
-	91,  // [91:91] is the sub-list for extension extendee
-	0,   // [0:91] is the sub-list for field type_name
+	103, // 90: om.v1.AcquireWriterHoldRequest.deadline:type_name -> google.protobuf.Timestamp
+	93,  // 91: om.v1.AcquireWriterHoldResponse.conflict:type_name -> om.v1.WriterHoldConflict
+	103, // 92: om.v1.HeartbeatWriterHoldRequest.deadline:type_name -> google.protobuf.Timestamp
+	56,  // 93: om.v1.TriggerHostBootstrapRequest.MemberConfigsEntry.value:type_name -> om.v1.BootstrapMemberConfig
+	14,  // 94: om.v1.OmService.GetTopology:input_type -> om.v1.GetTopologyRequest
+	22,  // 95: om.v1.OmService.ListTopologyRuns:input_type -> om.v1.ListTopologyRunsRequest
+	20,  // 96: om.v1.OmService.GetTopologyRun:input_type -> om.v1.GetTopologyRunRequest
+	24,  // 97: om.v1.OmService.TriggerTopologyCollection:input_type -> om.v1.TriggerTopologyCollectionRequest
+	37,  // 98: om.v1.OmService.ListInventoryHosts:input_type -> om.v1.ListInventoryHostsRequest
+	39,  // 99: om.v1.OmService.GetInventoryHost:input_type -> om.v1.GetInventoryHostRequest
+	41,  // 100: om.v1.OmService.DeleteInventoryHost:input_type -> om.v1.DeleteInventoryHostRequest
+	43,  // 101: om.v1.OmService.ListInventoryServices:input_type -> om.v1.ListInventoryServicesRequest
+	45,  // 102: om.v1.OmService.GetInventoryService:input_type -> om.v1.GetInventoryServiceRequest
+	47,  // 103: om.v1.OmService.DeleteInventoryService:input_type -> om.v1.DeleteInventoryServiceRequest
+	49,  // 104: om.v1.OmService.ListInventoryRuns:input_type -> om.v1.ListInventoryRunsRequest
+	51,  // 105: om.v1.OmService.GetInventoryRun:input_type -> om.v1.GetInventoryRunRequest
+	53,  // 106: om.v1.OmService.TriggerInventoryRefresh:input_type -> om.v1.TriggerInventoryRefreshRequest
+	55,  // 107: om.v1.OmService.TriggerHostBootstrap:input_type -> om.v1.TriggerHostBootstrapRequest
+	60,  // 108: om.v1.OmService.GetBootstrapRun:input_type -> om.v1.GetBootstrapRunRequest
+	64,  // 109: om.v1.OmService.ListBootstrapRuns:input_type -> om.v1.ListBootstrapRunsRequest
+	62,  // 110: om.v1.OmService.CancelBootstrapRun:input_type -> om.v1.CancelBootstrapRunRequest
+	66,  // 111: om.v1.OmService.GetInventoryConfig:input_type -> om.v1.GetInventoryConfigRequest
+	68,  // 112: om.v1.OmService.UpdateInventoryConfig:input_type -> om.v1.UpdateInventoryConfigRequest
+	70,  // 113: om.v1.OmService.DeleteInventoryConfigOverride:input_type -> om.v1.DeleteInventoryConfigOverrideRequest
+	73,  // 114: om.v1.OmService.GetSettings:input_type -> om.v1.GetSettingsRequest
+	75,  // 115: om.v1.OmService.UpdateSettings:input_type -> om.v1.UpdateSettingsRequest
+	77,  // 116: om.v1.OmService.DeleteSettingOverride:input_type -> om.v1.DeleteSettingOverrideRequest
+	81,  // 117: om.v1.OmService.ListOperations:input_type -> om.v1.ListOperationsRequest
+	83,  // 118: om.v1.OmService.GetOperation:input_type -> om.v1.GetOperationRequest
+	85,  // 119: om.v1.OmService.ConfirmOperation:input_type -> om.v1.ConfirmOperationRequest
+	87,  // 120: om.v1.OmService.CancelOperation:input_type -> om.v1.CancelOperationRequest
+	89,  // 121: om.v1.OmService.ResumeOperation:input_type -> om.v1.ResumeOperationRequest
+	91,  // 122: om.v1.OmService.AbandonOperation:input_type -> om.v1.AbandonOperationRequest
+	94,  // 123: om.v1.OmService.AcquireWriterHold:input_type -> om.v1.AcquireWriterHoldRequest
+	96,  // 124: om.v1.OmService.HeartbeatWriterHold:input_type -> om.v1.HeartbeatWriterHoldRequest
+	98,  // 125: om.v1.OmService.ReleaseWriterHold:input_type -> om.v1.ReleaseWriterHoldRequest
+	15,  // 126: om.v1.OmService.GetTopology:output_type -> om.v1.GetTopologyResponse
+	23,  // 127: om.v1.OmService.ListTopologyRuns:output_type -> om.v1.ListTopologyRunsResponse
+	21,  // 128: om.v1.OmService.GetTopologyRun:output_type -> om.v1.GetTopologyRunResponse
+	25,  // 129: om.v1.OmService.TriggerTopologyCollection:output_type -> om.v1.TriggerTopologyCollectionResponse
+	38,  // 130: om.v1.OmService.ListInventoryHosts:output_type -> om.v1.ListInventoryHostsResponse
+	40,  // 131: om.v1.OmService.GetInventoryHost:output_type -> om.v1.GetInventoryHostResponse
+	42,  // 132: om.v1.OmService.DeleteInventoryHost:output_type -> om.v1.DeleteInventoryHostResponse
+	44,  // 133: om.v1.OmService.ListInventoryServices:output_type -> om.v1.ListInventoryServicesResponse
+	46,  // 134: om.v1.OmService.GetInventoryService:output_type -> om.v1.GetInventoryServiceResponse
+	48,  // 135: om.v1.OmService.DeleteInventoryService:output_type -> om.v1.DeleteInventoryServiceResponse
+	50,  // 136: om.v1.OmService.ListInventoryRuns:output_type -> om.v1.ListInventoryRunsResponse
+	52,  // 137: om.v1.OmService.GetInventoryRun:output_type -> om.v1.GetInventoryRunResponse
+	54,  // 138: om.v1.OmService.TriggerInventoryRefresh:output_type -> om.v1.TriggerInventoryRefreshResponse
+	57,  // 139: om.v1.OmService.TriggerHostBootstrap:output_type -> om.v1.TriggerHostBootstrapResponse
+	61,  // 140: om.v1.OmService.GetBootstrapRun:output_type -> om.v1.GetBootstrapRunResponse
+	65,  // 141: om.v1.OmService.ListBootstrapRuns:output_type -> om.v1.ListBootstrapRunsResponse
+	63,  // 142: om.v1.OmService.CancelBootstrapRun:output_type -> om.v1.CancelBootstrapRunResponse
+	67,  // 143: om.v1.OmService.GetInventoryConfig:output_type -> om.v1.GetInventoryConfigResponse
+	69,  // 144: om.v1.OmService.UpdateInventoryConfig:output_type -> om.v1.UpdateInventoryConfigResponse
+	71,  // 145: om.v1.OmService.DeleteInventoryConfigOverride:output_type -> om.v1.DeleteInventoryConfigOverrideResponse
+	74,  // 146: om.v1.OmService.GetSettings:output_type -> om.v1.GetSettingsResponse
+	76,  // 147: om.v1.OmService.UpdateSettings:output_type -> om.v1.UpdateSettingsResponse
+	78,  // 148: om.v1.OmService.DeleteSettingOverride:output_type -> om.v1.DeleteSettingOverrideResponse
+	82,  // 149: om.v1.OmService.ListOperations:output_type -> om.v1.ListOperationsResponse
+	84,  // 150: om.v1.OmService.GetOperation:output_type -> om.v1.GetOperationResponse
+	86,  // 151: om.v1.OmService.ConfirmOperation:output_type -> om.v1.ConfirmOperationResponse
+	88,  // 152: om.v1.OmService.CancelOperation:output_type -> om.v1.CancelOperationResponse
+	90,  // 153: om.v1.OmService.ResumeOperation:output_type -> om.v1.ResumeOperationResponse
+	92,  // 154: om.v1.OmService.AbandonOperation:output_type -> om.v1.AbandonOperationResponse
+	95,  // 155: om.v1.OmService.AcquireWriterHold:output_type -> om.v1.AcquireWriterHoldResponse
+	97,  // 156: om.v1.OmService.HeartbeatWriterHold:output_type -> om.v1.HeartbeatWriterHoldResponse
+	99,  // 157: om.v1.OmService.ReleaseWriterHold:output_type -> om.v1.ReleaseWriterHoldResponse
+	126, // [126:158] is the sub-list for method output_type
+	94,  // [94:126] is the sub-list for method input_type
+	94,  // [94:94] is the sub-list for extension type_name
+	94,  // [94:94] is the sub-list for extension extendee
+	0,   // [0:94] is the sub-list for field type_name
 }
 
 func init() { file_om_v1_om_proto_init() }
@@ -7540,7 +7937,7 @@ func file_om_v1_om_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_om_v1_om_proto_rawDesc), len(file_om_v1_om_proto_rawDesc)),
 			NumEnums:      9,
-			NumMessages:   87,
+			NumMessages:   94,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

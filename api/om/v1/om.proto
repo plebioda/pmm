@@ -1393,6 +1393,54 @@ message AbandonOperationResponse {
   Operation operation = 1;
 }
 
+// WriterHoldConflict names the Operations holder a writer-hold acquire lost to.
+message WriterHoldConflict {
+  // The operation already holding a conflicting lock.
+  string holder_operation_id = 1;
+  // The mode the holder holds.
+  string holder_mode = 2;
+  // The mode the writer requested.
+  string requested_mode = 3;
+}
+
+// AcquireWriterHoldRequest asks for the locks a PBM-writing backup needs on a managed member.
+message AcquireWriterHoldRequest {
+  // The backup job's durable id; a retry under the same id reuses the hold.
+  string job_id = 1 [(validate.rules).string.min_len = 1];
+  // The PMM service ids the writer acts on; only those that are live managed-cluster members are locked.
+  repeated string service_ids = 2;
+  // When the hold's lease lapses unless heartbeated.
+  google.protobuf.Timestamp deadline = 3 [(validate.rules).timestamp.required = true];
+}
+
+// AcquireWriterHoldResponse reports whether the locks were taken, or who holds them.
+message AcquireWriterHoldResponse {
+  // Whether the cluster and member locks were taken; false with no conflict means no service is a managed member.
+  bool acquired = 1;
+  // The holder when the acquire lost a conflict; unset otherwise.
+  WriterHoldConflict conflict = 2;
+}
+
+// HeartbeatWriterHoldRequest extends a hold's lease.
+message HeartbeatWriterHoldRequest {
+  // The backup job whose hold to extend.
+  string job_id = 1 [(validate.rules).string.min_len = 1];
+  // The new lease deadline.
+  google.protobuf.Timestamp deadline = 2 [(validate.rules).timestamp.required = true];
+}
+
+// HeartbeatWriterHoldResponse is empty.
+message HeartbeatWriterHoldResponse {}
+
+// ReleaseWriterHoldRequest releases a hold on the backup job's terminal result.
+message ReleaseWriterHoldRequest {
+  // The backup job whose hold to release; a no-op once released.
+  string job_id = 1 [(validate.rules).string.min_len = 1];
+}
+
+// ReleaseWriterHoldResponse is empty.
+message ReleaseWriterHoldResponse {}
+
 // OmService provides the Operations for MongoDB topology and health API.
 service OmService {
   // GetTopology returns the whole MongoDB estate as one document.
@@ -1729,6 +1777,42 @@ service OmService {
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "Abandon an operation"
       description: "Resolves a failed operation that will not be resumed: releases its locks and clears the attention it raised, leaving it abandoned. Fenced by version."
+    };
+  }
+
+  // AcquireWriterHold takes Operations locks for a non-Operations PBM writer on a managed cluster's members.
+  rpc AcquireWriterHold(AcquireWriterHoldRequest) returns (AcquireWriterHoldResponse) {
+    option (google.api.http) = {
+      post: "/v1/om/writerHolds:acquire"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Acquire a writer hold"
+      description: "Takes the cluster and affected-member locks a PBM-writing backup needs before it acts on a managed cluster's members, committed before the action and keyed by the job id. Idempotent per job id. Returns acquired=false with no conflict when no service is a managed member; returns the holder on a conflict."
+    };
+  }
+
+  // HeartbeatWriterHold extends a writer hold's lease so the reaper does not reclaim a live writer's locks.
+  rpc HeartbeatWriterHold(HeartbeatWriterHoldRequest) returns (HeartbeatWriterHoldResponse) {
+    option (google.api.http) = {
+      post: "/v1/om/writerHolds:heartbeat"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Heartbeat a writer hold"
+      description: "Extends a writer hold's lease to a new deadline so the reaper does not reclaim a still-running backup's locks."
+    };
+  }
+
+  // ReleaseWriterHold drops a writer hold's locks on the backup job's terminal result.
+  rpc ReleaseWriterHold(ReleaseWriterHoldRequest) returns (ReleaseWriterHoldResponse) {
+    option (google.api.http) = {
+      post: "/v1/om/writerHolds:release"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Release a writer hold"
+      description: "Drops a writer hold's locks and finalises it. A no-op once released; the reaper reclaims a hold the writer never releases only after its lease lapses and PBM confirms the job terminal."
     };
   }
 }

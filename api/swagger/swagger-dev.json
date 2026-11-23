@@ -40698,6 +40698,262 @@
         }
       }
     },
+    "/v1/om/writerHolds:acquire": {
+      "post": {
+        "description": "Takes the cluster and affected-member locks a PBM-writing backup needs before it acts on a managed cluster's members, committed before the action and keyed by the job id. Idempotent per job id. Returns acquired=false with no conflict when no service is a managed member; returns the holder on a conflict.",
+        "tags": [
+          "OmService"
+        ],
+        "summary": "Acquire a writer hold",
+        "operationId": "AcquireWriterHold",
+        "parameters": [
+          {
+            "description": "AcquireWriterHoldRequest asks for the locks a PBM-writing backup needs on a managed member.",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "description": "AcquireWriterHoldRequest asks for the locks a PBM-writing backup needs on a managed member.",
+              "type": "object",
+              "properties": {
+                "job_id": {
+                  "description": "The backup job's durable id; a retry under the same id reuses the hold.",
+                  "type": "string",
+                  "x-order": 0
+                },
+                "service_ids": {
+                  "description": "The PMM service ids the writer acts on; only those that are live managed-cluster members are locked.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "x-order": 1
+                },
+                "deadline": {
+                  "description": "When the hold's lease lapses unless heartbeated.",
+                  "type": "string",
+                  "format": "date-time",
+                  "x-order": 2
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "description": "AcquireWriterHoldResponse reports whether the locks were taken, or who holds them.",
+              "type": "object",
+              "properties": {
+                "acquired": {
+                  "description": "Whether the cluster and member locks were taken; false with no conflict means no service is a managed member.",
+                  "type": "boolean",
+                  "x-order": 0
+                },
+                "conflict": {
+                  "description": "WriterHoldConflict names the Operations holder a writer-hold acquire lost to.",
+                  "type": "object",
+                  "properties": {
+                    "holder_operation_id": {
+                      "description": "The operation already holding a conflicting lock.",
+                      "type": "string",
+                      "x-order": 0
+                    },
+                    "holder_mode": {
+                      "description": "The mode the holder holds.",
+                      "type": "string",
+                      "x-order": 1
+                    },
+                    "requested_mode": {
+                      "description": "The mode the writer requested.",
+                      "type": "string",
+                      "x-order": 2
+                    }
+                  },
+                  "x-order": 1
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int32",
+                  "x-order": 0
+                },
+                "message": {
+                  "type": "string",
+                  "x-order": 1
+                },
+                "details": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "@type": {
+                        "type": "string",
+                        "x-order": 0
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "x-order": 2
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/om/writerHolds:heartbeat": {
+      "post": {
+        "description": "Extends a writer hold's lease to a new deadline so the reaper does not reclaim a still-running backup's locks.",
+        "tags": [
+          "OmService"
+        ],
+        "summary": "Heartbeat a writer hold",
+        "operationId": "HeartbeatWriterHold",
+        "parameters": [
+          {
+            "description": "HeartbeatWriterHoldRequest extends a hold's lease.",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "description": "HeartbeatWriterHoldRequest extends a hold's lease.",
+              "type": "object",
+              "properties": {
+                "job_id": {
+                  "description": "The backup job whose hold to extend.",
+                  "type": "string",
+                  "x-order": 0
+                },
+                "deadline": {
+                  "description": "The new lease deadline.",
+                  "type": "string",
+                  "format": "date-time",
+                  "x-order": 1
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "description": "HeartbeatWriterHoldResponse is empty.",
+              "type": "object"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int32",
+                  "x-order": 0
+                },
+                "message": {
+                  "type": "string",
+                  "x-order": 1
+                },
+                "details": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "@type": {
+                        "type": "string",
+                        "x-order": 0
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "x-order": 2
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/om/writerHolds:release": {
+      "post": {
+        "description": "Drops a writer hold's locks and finalises it. A no-op once released; the reaper reclaims a hold the writer never releases only after its lease lapses and PBM confirms the job terminal.",
+        "tags": [
+          "OmService"
+        ],
+        "summary": "Release a writer hold",
+        "operationId": "ReleaseWriterHold",
+        "parameters": [
+          {
+            "description": "ReleaseWriterHoldRequest releases a hold on the backup job's terminal result.",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "description": "ReleaseWriterHoldRequest releases a hold on the backup job's terminal result.",
+              "type": "object",
+              "properties": {
+                "job_id": {
+                  "description": "The backup job whose hold to release; a no-op once released.",
+                  "type": "string",
+                  "x-order": 0
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "description": "ReleaseWriterHoldResponse is empty.",
+              "type": "object"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "format": "int32",
+                  "x-order": 0
+                },
+                "message": {
+                  "type": "string",
+                  "x-order": 1
+                },
+                "details": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "@type": {
+                        "type": "string",
+                        "x-order": 0
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "x-order": 2
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/qan/health": {
       "get": {
         "description": "Returns readiness of QAN API2 service.",

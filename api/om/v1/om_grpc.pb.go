@@ -49,6 +49,9 @@ const (
 	OmService_CancelOperation_FullMethodName               = "/om.v1.OmService/CancelOperation"
 	OmService_ResumeOperation_FullMethodName               = "/om.v1.OmService/ResumeOperation"
 	OmService_AbandonOperation_FullMethodName              = "/om.v1.OmService/AbandonOperation"
+	OmService_AcquireWriterHold_FullMethodName             = "/om.v1.OmService/AcquireWriterHold"
+	OmService_HeartbeatWriterHold_FullMethodName           = "/om.v1.OmService/HeartbeatWriterHold"
+	OmService_ReleaseWriterHold_FullMethodName             = "/om.v1.OmService/ReleaseWriterHold"
 )
 
 // OmServiceClient is the client API for OmService service.
@@ -152,6 +155,12 @@ type OmServiceClient interface {
 	ResumeOperation(ctx context.Context, in *ResumeOperationRequest, opts ...grpc.CallOption) (*ResumeOperationResponse, error)
 	// AbandonOperation resolves a failed operation, releasing its locks.
 	AbandonOperation(ctx context.Context, in *AbandonOperationRequest, opts ...grpc.CallOption) (*AbandonOperationResponse, error)
+	// AcquireWriterHold takes Operations locks for a non-Operations PBM writer on a managed cluster's members.
+	AcquireWriterHold(ctx context.Context, in *AcquireWriterHoldRequest, opts ...grpc.CallOption) (*AcquireWriterHoldResponse, error)
+	// HeartbeatWriterHold extends a writer hold's lease so the reaper does not reclaim a live writer's locks.
+	HeartbeatWriterHold(ctx context.Context, in *HeartbeatWriterHoldRequest, opts ...grpc.CallOption) (*HeartbeatWriterHoldResponse, error)
+	// ReleaseWriterHold drops a writer hold's locks on the backup job's terminal result.
+	ReleaseWriterHold(ctx context.Context, in *ReleaseWriterHoldRequest, opts ...grpc.CallOption) (*ReleaseWriterHoldResponse, error)
 }
 
 type omServiceClient struct {
@@ -452,6 +461,36 @@ func (c *omServiceClient) AbandonOperation(ctx context.Context, in *AbandonOpera
 	return out, nil
 }
 
+func (c *omServiceClient) AcquireWriterHold(ctx context.Context, in *AcquireWriterHoldRequest, opts ...grpc.CallOption) (*AcquireWriterHoldResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AcquireWriterHoldResponse)
+	err := c.cc.Invoke(ctx, OmService_AcquireWriterHold_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *omServiceClient) HeartbeatWriterHold(ctx context.Context, in *HeartbeatWriterHoldRequest, opts ...grpc.CallOption) (*HeartbeatWriterHoldResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HeartbeatWriterHoldResponse)
+	err := c.cc.Invoke(ctx, OmService_HeartbeatWriterHold_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *omServiceClient) ReleaseWriterHold(ctx context.Context, in *ReleaseWriterHoldRequest, opts ...grpc.CallOption) (*ReleaseWriterHoldResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReleaseWriterHoldResponse)
+	err := c.cc.Invoke(ctx, OmService_ReleaseWriterHold_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OmServiceServer is the server API for OmService service.
 // All implementations must embed UnimplementedOmServiceServer
 // for forward compatibility.
@@ -553,6 +592,12 @@ type OmServiceServer interface {
 	ResumeOperation(context.Context, *ResumeOperationRequest) (*ResumeOperationResponse, error)
 	// AbandonOperation resolves a failed operation, releasing its locks.
 	AbandonOperation(context.Context, *AbandonOperationRequest) (*AbandonOperationResponse, error)
+	// AcquireWriterHold takes Operations locks for a non-Operations PBM writer on a managed cluster's members.
+	AcquireWriterHold(context.Context, *AcquireWriterHoldRequest) (*AcquireWriterHoldResponse, error)
+	// HeartbeatWriterHold extends a writer hold's lease so the reaper does not reclaim a live writer's locks.
+	HeartbeatWriterHold(context.Context, *HeartbeatWriterHoldRequest) (*HeartbeatWriterHoldResponse, error)
+	// ReleaseWriterHold drops a writer hold's locks on the backup job's terminal result.
+	ReleaseWriterHold(context.Context, *ReleaseWriterHoldRequest) (*ReleaseWriterHoldResponse, error)
 	mustEmbedUnimplementedOmServiceServer()
 }
 
@@ -677,6 +722,18 @@ func (UnimplementedOmServiceServer) ResumeOperation(context.Context, *ResumeOper
 
 func (UnimplementedOmServiceServer) AbandonOperation(context.Context, *AbandonOperationRequest) (*AbandonOperationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AbandonOperation not implemented")
+}
+
+func (UnimplementedOmServiceServer) AcquireWriterHold(context.Context, *AcquireWriterHoldRequest) (*AcquireWriterHoldResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcquireWriterHold not implemented")
+}
+
+func (UnimplementedOmServiceServer) HeartbeatWriterHold(context.Context, *HeartbeatWriterHoldRequest) (*HeartbeatWriterHoldResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method HeartbeatWriterHold not implemented")
+}
+
+func (UnimplementedOmServiceServer) ReleaseWriterHold(context.Context, *ReleaseWriterHoldRequest) (*ReleaseWriterHoldResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReleaseWriterHold not implemented")
 }
 func (UnimplementedOmServiceServer) mustEmbedUnimplementedOmServiceServer() {}
 func (UnimplementedOmServiceServer) testEmbeddedByValue()                   {}
@@ -1221,6 +1278,60 @@ func _OmService_AbandonOperation_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OmService_AcquireWriterHold_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcquireWriterHoldRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OmServiceServer).AcquireWriterHold(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OmService_AcquireWriterHold_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OmServiceServer).AcquireWriterHold(ctx, req.(*AcquireWriterHoldRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OmService_HeartbeatWriterHold_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HeartbeatWriterHoldRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OmServiceServer).HeartbeatWriterHold(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OmService_HeartbeatWriterHold_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OmServiceServer).HeartbeatWriterHold(ctx, req.(*HeartbeatWriterHoldRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OmService_ReleaseWriterHold_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReleaseWriterHoldRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OmServiceServer).ReleaseWriterHold(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OmService_ReleaseWriterHold_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OmServiceServer).ReleaseWriterHold(ctx, req.(*ReleaseWriterHoldRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OmService_ServiceDesc is the grpc.ServiceDesc for OmService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1343,6 +1454,18 @@ var OmService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AbandonOperation",
 			Handler:    _OmService_AbandonOperation_Handler,
+		},
+		{
+			MethodName: "AcquireWriterHold",
+			Handler:    _OmService_AcquireWriterHold_Handler,
+		},
+		{
+			MethodName: "HeartbeatWriterHold",
+			Handler:    _OmService_HeartbeatWriterHold_Handler,
+		},
+		{
+			MethodName: "ReleaseWriterHold",
+			Handler:    _OmService_ReleaseWriterHold_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -53,6 +53,8 @@ type ClientOption func(*runtime.ClientOperation)
 type ClientService interface {
 	AbandonOperation(params *AbandonOperationParams, opts ...ClientOption) (*AbandonOperationOK, error)
 
+	AcquireWriterHold(params *AcquireWriterHoldParams, opts ...ClientOption) (*AcquireWriterHoldOK, error)
+
 	CancelBootstrapRun(params *CancelBootstrapRunParams, opts ...ClientOption) (*CancelBootstrapRunOK, error)
 
 	CancelOperation(params *CancelOperationParams, opts ...ClientOption) (*CancelOperationOK, error)
@@ -85,6 +87,8 @@ type ClientService interface {
 
 	GetTopologyRun(params *GetTopologyRunParams, opts ...ClientOption) (*GetTopologyRunOK, error)
 
+	HeartbeatWriterHold(params *HeartbeatWriterHoldParams, opts ...ClientOption) (*HeartbeatWriterHoldOK, error)
+
 	ListBootstrapRuns(params *ListBootstrapRunsParams, opts ...ClientOption) (*ListBootstrapRunsOK, error)
 
 	ListInventoryHosts(params *ListInventoryHostsParams, opts ...ClientOption) (*ListInventoryHostsOK, error)
@@ -96,6 +100,8 @@ type ClientService interface {
 	ListOperations(params *ListOperationsParams, opts ...ClientOption) (*ListOperationsOK, error)
 
 	ListTopologyRuns(params *ListTopologyRunsParams, opts ...ClientOption) (*ListTopologyRunsOK, error)
+
+	ReleaseWriterHold(params *ReleaseWriterHoldParams, opts ...ClientOption) (*ReleaseWriterHoldOK, error)
 
 	ResumeOperation(params *ResumeOperationParams, opts ...ClientOption) (*ResumeOperationOK, error)
 
@@ -152,6 +158,50 @@ func (a *Client) AbandonOperation(params *AbandonOperationParams, opts ...Client
 	//
 	// a default response is provided: fill this and return an error
 	unexpectedSuccess := result.(*AbandonOperationDefault)
+
+	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
+}
+
+/*
+AcquireWriterHold acquires a writer hold
+
+Takes the cluster and affected-member locks a PBM-writing backup needs before it acts on a managed cluster's members, committed before the action and keyed by the job id. Idempotent per job id. Returns acquired=false with no conflict when no service is a managed member; returns the holder on a conflict.
+*/
+func (a *Client) AcquireWriterHold(params *AcquireWriterHoldParams, opts ...ClientOption) (*AcquireWriterHoldOK, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewAcquireWriterHoldParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "AcquireWriterHold",
+		Method:             "POST",
+		PathPattern:        "/v1/om/writerHolds:acquire",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &AcquireWriterHoldReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*AcquireWriterHoldOK)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+	//
+	// a default response is provided: fill this and return an error
+	unexpectedSuccess := result.(*AcquireWriterHoldDefault)
 
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
@@ -861,6 +911,50 @@ func (a *Client) GetTopologyRun(params *GetTopologyRunParams, opts ...ClientOpti
 }
 
 /*
+HeartbeatWriterHold heartbeats a writer hold
+
+Extends a writer hold's lease to a new deadline so the reaper does not reclaim a still-running backup's locks.
+*/
+func (a *Client) HeartbeatWriterHold(params *HeartbeatWriterHoldParams, opts ...ClientOption) (*HeartbeatWriterHoldOK, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewHeartbeatWriterHoldParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "HeartbeatWriterHold",
+		Method:             "POST",
+		PathPattern:        "/v1/om/writerHolds:heartbeat",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &HeartbeatWriterHoldReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*HeartbeatWriterHoldOK)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+	//
+	// a default response is provided: fill this and return an error
+	unexpectedSuccess := result.(*HeartbeatWriterHoldDefault)
+
+	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
+}
+
+/*
 ListBootstrapRuns lists bootstrap runs po c
 
 Returns the recorded bootstrap runs, newest first, each in the same full detail GetBootstrapRun answers with.
@@ -1120,6 +1214,50 @@ func (a *Client) ListTopologyRuns(params *ListTopologyRunsParams, opts ...Client
 	//
 	// a default response is provided: fill this and return an error
 	unexpectedSuccess := result.(*ListTopologyRunsDefault)
+
+	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
+}
+
+/*
+ReleaseWriterHold releases a writer hold
+
+Drops a writer hold's locks and finalises it. A no-op once released; the reaper reclaims a hold the writer never releases only after its lease lapses and PBM confirms the job terminal.
+*/
+func (a *Client) ReleaseWriterHold(params *ReleaseWriterHoldParams, opts ...ClientOption) (*ReleaseWriterHoldOK, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewReleaseWriterHoldParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "ReleaseWriterHold",
+		Method:             "POST",
+		PathPattern:        "/v1/om/writerHolds:release",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &ReleaseWriterHoldReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*ReleaseWriterHoldOK)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+	//
+	// a default response is provided: fill this and return an error
+	unexpectedSuccess := result.(*ReleaseWriterHoldDefault)
 
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
