@@ -32,6 +32,7 @@ import (
 
 	"github.com/percona/pmm/managed/models"
 	"github.com/percona/pmm/managed/services"
+	"github.com/percona/pmm/managed/services/om"
 )
 
 // Service represents core logic for db backup.
@@ -70,6 +71,10 @@ type PerformBackupParams struct {
 }
 
 // PerformBackup starts on-demand backup.
+// A backup's Operations writer hold carries this lease; the reaper may reclaim only after it lapses,
+// and the hold is released on the job's terminal result, so this bound is just the crash backstop.
+const writerHoldLease = 24 * time.Hour
+
 func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams) (string, error) { //nolint:gocognit,cyclop
 	dbVersion, err := s.compatibilityService.CheckSoftwareCompatibilityForService(ctx, params.ServiceID)
 	if err != nil {
@@ -216,6 +221,19 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 		return "", errTX
 	}
 
+	writerHeld, conflict, err := om.AcquireWriterHold(ctx, s.db, job.ID, []string{params.ServiceID}, time.Now().Add(writerHoldLease))
+	if err != nil {
+		return "", err
+	}
+	if conflict != nil {
+		_, dbErr := models.UpdateArtifact(s.db.Querier, artifact.ID, models.UpdateArtifactParams{Status: models.ErrorBackupStatus.Pointer()})
+		if dbErr != nil {
+			s.l.WithError(dbErr).Error("failed to update backup artifact status")
+		}
+		return "", status.Errorf(codes.FailedPrecondition,
+			"service is locked by Operations operation %s (%s)", conflict.HolderOperationID, conflict.HolderMode)
+	}
+
 	locationConfig := &models.BackupLocationConfig{
 		FilesystemConfig: locationModel.FilesystemConfig,
 		S3Config:         locationModel.S3Config,
@@ -236,6 +254,12 @@ func (s *Service) PerformBackup(ctx context.Context, params PerformBackupParams)
 		err = status.Errorf(codes.Unknown, "Unknown service: %s", svc.ServiceType)
 	}
 	if err != nil {
+		if writerHeld {
+			relErr := om.ReleaseExternalHold(s.db.Querier, job.ID)
+			if relErr != nil {
+				s.l.WithError(relErr).Error("failed to release writer hold after dispatch failure")
+			}
+		}
 		target, ok := errors.AsType[models.AgentNotSupportedError](err)
 		if ok {
 			_, dbErr := models.UpdateArtifact(s.db.Querier, artifact.ID, models.UpdateArtifactParams{
@@ -395,8 +419,29 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 		return "", errTx
 	}
 
+	writerHeld, conflict, err := om.AcquireWriterHold(ctx, s.db, params.JobID, []string{serviceID}, time.Now().Add(writerHoldLease))
+	if err != nil {
+		return "", err
+	}
+	if conflict != nil {
+		_, dbErr := models.ChangeRestoreHistoryItem(s.db.Querier, restoreID, models.ChangeRestoreHistoryItemParams{
+			Status: models.ErrorRestoreStatus, FinishedAt: new(models.Now()),
+		})
+		if dbErr != nil {
+			s.l.WithError(dbErr).Error("failed to update restore history item status")
+		}
+		return "", status.Errorf(codes.FailedPrecondition,
+			"service is locked by Operations operation %s (%s)", conflict.HolderOperationID, conflict.HolderMode)
+	}
+
 	err = s.startRestoreJob(&params)
 	if err != nil {
+		if writerHeld {
+			relErr := om.ReleaseExternalHold(s.db.Querier, params.JobID)
+			if relErr != nil {
+				s.l.WithError(relErr).Error("failed to release writer hold after dispatch failure")
+			}
+		}
 		return "", err
 	}
 

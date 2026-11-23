@@ -30,6 +30,7 @@ import (
 	agentv1 "github.com/percona/pmm/api/agent/v1"
 	backuppb "github.com/percona/pmm/api/backup/v1"
 	"github.com/percona/pmm/managed/models"
+	"github.com/percona/pmm/managed/services/om"
 )
 
 var (
@@ -52,17 +53,19 @@ type JobsService struct {
 	r  *Registry
 	db *reform.DB
 
-	retentionService retentionService
-	l                *logrus.Entry
+	retentionService  retentionService
+	releaseWriterHold func(q *reform.Querier, jobID string) error
+	l                 *logrus.Entry
 }
 
 // NewJobsService returns new jobs service.
 func NewJobsService(db *reform.DB, registry *Registry, retention retentionService) *JobsService {
 	return &JobsService{
-		db:               db,
-		r:                registry,
-		retentionService: retention,
-		l:                logrus.WithField("component", "agents/jobsService"),
+		db:                db,
+		r:                 registry,
+		retentionService:  retention,
+		releaseWriterHold: om.ReleaseExternalHold,
+		l:                 logrus.WithField("component", "agents/jobsService"),
 	}
 }
 
@@ -323,6 +326,15 @@ func (s *JobsService) handleJobResult(_ context.Context, l *logrus.Entry, result
 	})
 	if errTx != nil {
 		l.Errorf("Failed to save job result: %+v", errTx)
+	}
+
+	// A terminal job result releases any Operations writer hold the backup took on a managed
+	// cluster's members; release is idempotent and a no-op when the job holds none.
+	if s.releaseWriterHold != nil {
+		relErr := s.releaseWriterHold(s.db.Querier, result.JobId)
+		if relErr != nil {
+			l.WithError(relErr).Warn("failed to release Operations writer hold")
+		}
 	}
 
 	if scheduleID != "" {

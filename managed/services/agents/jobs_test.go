@@ -80,6 +80,7 @@ func TestHandleJobResultMongoDBBackupFolderUpdateError(t *testing.T) {
 	mock.ExpectRollback()
 
 	s := NewJobsService(db, nil, nil)
+	s.releaseWriterHold = func(*reform.Querier, string) error { return nil }
 	s.handleJobResult(t.Context(), logrus.WithField("test", t.Name()), &agentv1.JobResult{
 		JobId:  job.ID,
 		Result: &agentv1.JobResult_MongodbBackup{MongodbBackup: &agentv1.JobResult_MongoDBBackup{}},
