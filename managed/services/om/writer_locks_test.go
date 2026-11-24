@@ -140,6 +140,26 @@ func TestAcquireWriterHoldConflictNamesHolder(t *testing.T) {
 	assert.Equal(t, 0, heldLocks(t, db, externalOpID(jobID)), "a refused acquire rolls back whole")
 }
 
+func TestAcquireWriterHoldTwoWritersConflict(t *testing.T) {
+	db := lockTestDB(t)
+	clusterID := lockCluster(t, db.Querier)
+	serviceID := uuid.New().String()
+	managedMember(t, db, clusterID, serviceID)
+	firstJob := "writer-job-first"
+	secondJob := "writer-job-second"
+
+	acquired, _, err := AcquireWriterHold(t.Context(), db, firstJob, []string{serviceID}, time.Now().Add(time.Minute))
+	require.NoError(t, err)
+	require.True(t, acquired)
+
+	acquired, conflict, err := AcquireWriterHold(t.Context(), db, secondJob, []string{serviceID}, time.Now().Add(time.Minute))
+	require.NoError(t, err)
+	assert.False(t, acquired)
+	require.NotNil(t, conflict)
+	assert.Equal(t, externalOpID(firstJob), conflict.HolderOperationID)
+	assert.Equal(t, 0, heldLocks(t, db, externalOpID(secondJob)), "the refused second writer holds nothing")
+}
+
 func TestAcquireWriterHoldIdempotent(t *testing.T) {
 	db := lockTestDB(t)
 	clusterID := lockCluster(t, db.Querier)

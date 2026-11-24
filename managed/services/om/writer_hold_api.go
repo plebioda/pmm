@@ -25,7 +25,7 @@ import (
 )
 
 // AcquireWriterHold takes the Operations locks a non-Operations PBM writer needs on a managed
-// cluster's members, so PMM Extensions' backup_mongo can serialize against Operations over the API.
+// cluster's members, so a managed-cluster backup can serialize against Operations over the API.
 func (s *Service) AcquireWriterHold(ctx context.Context, req *omv1.AcquireWriterHoldRequest) (*omv1.AcquireWriterHoldResponse, error) {
 	acquired, conflict, err := AcquireWriterHold(ctx, s.db, req.GetJobId(), req.GetServiceIds(), req.GetDeadline().AsTime())
 	if err != nil {
