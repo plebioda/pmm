@@ -160,7 +160,8 @@ func (s *Service) WithScanScheduler(extensionsURL, token string) *Service {
 	}
 	client := newExtensionsClient(extensionsURL, token)
 	requester := newInventoryScanRequester(s.db, client)
-	s.scanScheduler = NewScanScheduler(s.db, s.l.WithField("component", "om-scans"), requester).WithLeader(s.ha)
+	s.scanScheduler = NewScanScheduler(s.db, s.l.WithField("component", "om-scans"), requester).
+		WithLeader(s.ha).WithReader(newFactReader(client))
 	return s
 }
 
