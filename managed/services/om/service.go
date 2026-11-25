@@ -161,7 +161,7 @@ func (s *Service) WithScanScheduler(extensionsURL, token string) *Service {
 	client := newExtensionsClient(extensionsURL, token)
 	requester := newInventoryScanRequester(s.db, client)
 	s.scanScheduler = NewScanScheduler(s.db, s.l.WithField("component", "om-scans"), requester).
-		WithLeader(s.ha).WithReader(newFactReader(client))
+		WithLeader(s.ha).WithReader(newFactReader(client)).WithMetricsReader(s)
 	return s
 }
 
@@ -172,6 +172,32 @@ func (s *Service) RunScanScheduler(ctx context.Context) {
 		return
 	}
 	s.scanScheduler.Run(ctx)
+}
+
+// ServiceMetricsFacts returns the current exporter-metric facts for the given services, keyed by
+// service id, so the accepted state baselines cluster facts from metrics rather than a scan.
+func (s *Service) ServiceMetricsFacts(ctx context.Context, serviceIDs []string) (map[string]map[string]any, error) {
+	if len(serviceIDs) == 0 {
+		return map[string]map[string]any{}, nil
+	}
+	services := make([]*models.Service, 0, len(serviceIDs))
+	for _, id := range serviceIDs {
+		services = append(services, &models.Service{ServiceID: id})
+	}
+	result := metricsSource{vm: s.vmClient, l: s.l, now: time.Now()}.collect(ctx, services)
+	if result.Status == SourceFailed {
+		return nil, fmt.Errorf("failed to read metrics facts for %d service(s)", len(serviceIDs))
+	}
+	merged := mergeFacts([]SourceResult{result}, defaultPrecedence)
+	out := make(map[string]map[string]any, len(merged))
+	for serviceID, fields := range merged {
+		facts := make(map[string]any, len(fields))
+		for field, held := range fields {
+			facts[field] = held.Value
+		}
+		out[serviceID] = facts
+	}
+	return out, nil
 }
 
 // WithOperationRunner registers the operation kinds and composes a leader-gated driver that reads their
