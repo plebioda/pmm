@@ -1929,6 +1929,12 @@ BEGIN
   END LOOP;
 END $$`,
 	},
+	{
+		// Operations for MongoDB (PMM-15859): the generic destructive-confirm phrase and the
+		// residual-hosts record an abandoned operation carries.
+		`ALTER TABLE om_operations ADD COLUMN confirm_phrase TEXT`,
+		`ALTER TABLE om_operations ADD COLUMN residual_hosts JSONB`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
