@@ -215,6 +215,37 @@ func TestDriveRunningReprobeRolledBackRunRollsBackOperation(t *testing.T) {
 	assert.Equal(t, 1, stepCount(t, db, opID), "the re-probe reused the step rather than opening a second")
 }
 
+// resumableTerminalKind is a Resumable kind with an onTerminal hook, for the genuine-failure path:
+// a resumable failed keeps its locks and does not compensate, unlike a rolled_back.
+func resumableTerminalKind(onTerminal *bool) OperationKind {
+	kind := terminalKind(onTerminal)
+	kind.Resumable = true
+	return kind
+}
+
+func TestDriveRunningGenuineFailureKeepsLocksWithoutCompensating(t *testing.T) {
+	db := lockTestDB(t)
+	clusterID := lockCluster(t, db.Querier)
+	opID, epoch := runningOp(t, db, clusterID)
+	terminalRan := false
+	kind := resumableTerminalKind(&terminalRan)
+
+	outcome, err := driveRunning(t.Context(), db, opID, kind, &fakeExecutor{result: StepResultFailed}, epoch)
+	require.NoError(t, err)
+	assert.Equal(t, RunStepFailed, outcome)
+
+	var status string
+	require.NoError(t, db.QueryRow("SELECT status FROM om_operations WHERE id = $1", opID).Scan(&status))
+	assert.Equal(t, string(models.OmOperationFailed), status, "a genuine failure parks a resumable op as failed, not rolled_back")
+	assert.False(t, terminalRan, "a resumable failed waits for Resume or Abandon; it does not run onTerminal")
+	assert.Positive(t, heldLocks(t, db, opID), "a resumable failed keeps its locks for Resume")
+
+	var failed int
+	require.NoError(t, db.QueryRow(
+		"SELECT count(*) FROM om_attention WHERE cluster_id = $1 AND reason = 'operation_failed' AND resolved_at IS NULL", clusterID).Scan(&failed))
+	assert.Equal(t, 1, failed, "a genuine failure raises operation_failed attention")
+}
+
 func TestDriveRunningFencedByStaleEpoch(t *testing.T) {
 	db := lockTestDB(t)
 	clusterID := lockCluster(t, db.Querier)
