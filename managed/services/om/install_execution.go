@@ -53,13 +53,14 @@ type bootstrapRunner interface {
 type installStepExecutor struct {
 	db        *reform.DB
 	bootstrap bootstrapRunner
+	nudger    inventoryNudger
 	op        *models.OmOperation
 	l         *logrus.Entry
 }
 
 // Run creates the om_bootstrap run on the first probe and maps its status on each later one: a succeeded
-// run is ok, a failed run fails, a rolled-back run finalises the operation as rolled_back, and a
-// still-running one is inconclusive.
+// run is ok, a failed run fails, a rolled-back run re-probes the freed nodes and finalises the operation
+// as rolled_back, and a still-running one is inconclusive.
 func (e *installStepExecutor) Run(ctx context.Context, _ StepPlan, idempotencyKey string) (StepResultKind, []byte, error) {
 	ctx = asService(ctx)
 	runID, err := e.runIDFromStep(idempotencyKey)
@@ -91,9 +92,22 @@ func (e *installStepExecutor) Run(ctx context.Context, _ StepPlan, idempotencyKe
 	case bootstrapRunFailed:
 		return stepResult(StepResultFailed, runID)
 	case bootstrapRunRolledBack:
+		e.nudgeRolledBackNodes(ctx)
 		return stepResult(StepResultRolledBack, runID)
 	default:
 		return stepResult(StepResultTimedOut, runID)
+	}
+}
+
+// nudgeRolledBackNodes re-probes the install's freed nodes so their install-readiness facts refresh after
+// the rollback, making them eligible for a fresh install without waiting for the periodic sweep.
+func (e *installStepExecutor) nudgeRolledBackNodes(ctx context.Context) {
+	if e.nudger == nil {
+		return
+	}
+	nodeIDs := installParamsOf(e.op).NodeIDs
+	if len(nodeIDs) > 0 {
+		e.nudger.nudgeInventory(ctx, nodeIDs)
 	}
 }
 
@@ -202,7 +216,7 @@ type installStepExecutorProvider struct {
 func (p installStepExecutorProvider) Executor(op *models.OmOperation, kind OperationKind) (StepExecutor, error) {
 	switch kind.Kind {
 	case installKind:
-		return &installStepExecutor{db: p.db, bootstrap: p.bootstrap, op: op, l: p.l}, nil
+		return &installStepExecutor{db: p.db, bootstrap: p.bootstrap, nudger: p.nudger, op: op, l: p.l}, nil
 	case uninstallKind:
 		return &uninstallStepExecutor{db: p.db, bootstrap: p.bootstrap, forgetter: p.forgetter, nudger: p.nudger, reader: p.reader, op: op, l: p.l}, nil
 	}

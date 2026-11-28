@@ -116,6 +116,21 @@ func TestInstallExecutorMapsRunStatus(t *testing.T) {
 	}
 }
 
+func TestInstallExecutorReprobesNodesOnRollback(t *testing.T) {
+	db := lockTestDB(t)
+	op := installOpWithPlan(t, db)
+	key := op.ID + "/run/bootstrap/1"
+	insertBootstrapStep(t, db, op, key, []byte(`{"run_id":"run-1"}`))
+	fake := &fakeBootstrapRunner{run: &extensionsBootstrapRun{ID: "run-1", Status: bootstrapRunRolledBack}}
+	nudger := &fakeNudger{}
+	executor := &installStepExecutor{db: db, bootstrap: fake, nudger: nudger, op: op}
+
+	result, _, err := executor.Run(t.Context(), StepPlan{}, key)
+	require.NoError(t, err)
+	assert.Equal(t, StepResultRolledBack, result)
+	assert.Equal(t, [][]string{{"node-a"}}, nudger.nudged, "the rollback re-probes the freed node so it is installable again")
+}
+
 func TestInstallExecutorRecordsManifest(t *testing.T) {
 	db := lockTestDB(t)
 	op := installOpWithPlan(t, db)
