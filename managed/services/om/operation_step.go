@@ -29,11 +29,12 @@ type StepResultKind string
 
 // Typed step results from the Extensions run contract (E0-T3).
 const (
-	StepResultOk       StepResultKind = "ok"
-	StepResultBlocked  StepResultKind = "blocked"
-	StepResultFailed   StepResultKind = "failed"
-	StepResultTimedOut StepResultKind = "timed_out"
-	StepResultUnknown  StepResultKind = "unknown"
+	StepResultOk         StepResultKind = "ok"
+	StepResultBlocked    StepResultKind = "blocked"
+	StepResultFailed     StepResultKind = "failed"
+	StepResultRolledBack StepResultKind = "rolled_back"
+	StepResultTimedOut   StepResultKind = "timed_out"
+	StepResultUnknown    StepResultKind = "unknown"
 )
 
 // legalStepTransitions is the step state machine; dispatching or running goes to unknown on a
@@ -50,13 +51,13 @@ func canStepTransition(from, to models.OmStepStatus) bool {
 	return legalStepTransitions[from][to]
 }
 
-// mapStepResult maps a typed E0-T3 result onto a step status: Ok succeeds, Failed and Blocked fail,
-// and the inconclusive results become unknown for the proof probe to resolve.
+// mapStepResult maps a typed E0-T3 result onto a step status: Ok succeeds, Failed, Blocked and a
+// rolled-back run fail the step, and the inconclusive results become unknown for the proof probe to resolve.
 func mapStepResult(result StepResultKind) models.OmStepStatus {
 	switch result {
 	case StepResultOk:
 		return models.OmStepSucceeded
-	case StepResultFailed, StepResultBlocked:
+	case StepResultFailed, StepResultBlocked, StepResultRolledBack:
 		return models.OmStepFailed
 	default:
 		return models.OmStepUnknown

@@ -52,11 +52,13 @@ type RunOutcome string
 
 // Running-phase outcomes.
 const (
-	RunStepSucceeded      RunOutcome = "step_succeeded"
-	RunStepPending        RunOutcome = "step_pending"
-	RunStepFailed         RunOutcome = "step_failed"
-	RunFenced             RunOutcome = "fenced"
-	RunOperationSucceeded RunOutcome = "operation_succeeded"
+	RunStepSucceeded       RunOutcome = "step_succeeded"
+	RunStepPending         RunOutcome = "step_pending"
+	RunStepFailed          RunOutcome = "step_failed"
+	RunStepRolledBack      RunOutcome = "step_rolled_back"
+	RunFenced              RunOutcome = "fenced"
+	RunOperationSucceeded  RunOutcome = "operation_succeeded"
+	RunOperationRolledBack RunOutcome = "operation_rolled_back"
 )
 
 // driveRunning advances a running operation by one tick: it dispatches the next not-yet-succeeded
@@ -73,10 +75,23 @@ func driveRunning(ctx context.Context, db *reform.DB, operationID string, kind O
 		if done[key] {
 			continue
 		}
+		var outcome RunOutcome
 		if step := pending[key]; step != nil {
-			return reprobeStep(ctx, db, op, plan, step, executor)
+			outcome, err = reprobeStep(ctx, db, op, plan, step, executor)
+		} else {
+			outcome, err = driveStep(ctx, db, op, plan, executor, cachedEpoch)
 		}
-		return driveStep(ctx, db, op, plan, executor, cachedEpoch)
+		if err != nil {
+			return "", err
+		}
+		if outcome != RunStepRolledBack {
+			return outcome, nil
+		}
+		err = finalizeRolledBack(ctx, db, op, kind)
+		if err != nil {
+			return "", err
+		}
+		return RunOperationRolledBack, nil
 	}
 	err = finalizeSucceeded(ctx, db, op, kind)
 	if err != nil {
@@ -149,6 +164,9 @@ func reprobeStep(ctx context.Context, db *reform.DB, op *models.OmOperation, pla
 	if mapStepResult(result) == models.OmStepSucceeded {
 		return RunStepSucceeded, nil
 	}
+	if result == StepResultRolledBack {
+		return RunStepRolledBack, nil
+	}
 	return failRunningOperation(ctx, db, op.ID, *op.ClusterID, string(result))
 }
 
@@ -186,6 +204,9 @@ func driveStep(ctx context.Context, db *reform.DB, op *models.OmOperation, plan 
 	case models.OmStepUnknown:
 		return RunStepPending, nil
 	default:
+		if result == StepResultRolledBack {
+			return RunStepRolledBack, nil
+		}
 		return failRunningOperation(ctx, db, op.ID, *op.ClusterID, string(result))
 	}
 }
@@ -217,6 +238,35 @@ func finalizeSucceeded(ctx context.Context, db *reform.DB, op *models.OmOperatio
 		}
 		_, err = tx.Exec("UPDATE om_operations SET finished_at = now() WHERE id = $1", op.ID)
 		return err
+	})
+}
+
+// finalizeRolledBack moves a running operation to rolled_back, running onTerminal, deleting the
+// administrator secret and releasing the locks, so an aborted run compensates instead of parking failed.
+func finalizeRolledBack(ctx context.Context, db *reform.DB, op *models.OmOperation, kind OperationKind) error {
+	return db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
+		res, err := tx.Exec(
+			"UPDATE om_operations SET status = 'rolled_back', version = version + 1, finished_at = now() WHERE id = $1 AND status = 'running'",
+			op.ID)
+		if err != nil {
+			return err
+		}
+		moved, err := res.RowsAffected()
+		if err != nil || moved == 0 {
+			return err
+		}
+		err = releaseLocks(tx.Querier, op.ID)
+		if err != nil {
+			return err
+		}
+		err = deleteAdministratorSecret(tx.Querier, op.ID)
+		if err != nil {
+			return err
+		}
+		if kind.OnTerminal != nil {
+			return kind.OnTerminal(tx, op)
+		}
+		return nil
 	})
 }
 

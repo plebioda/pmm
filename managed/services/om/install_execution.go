@@ -58,7 +58,8 @@ type installStepExecutor struct {
 }
 
 // Run creates the om_bootstrap run on the first probe and maps its status on each later one: a succeeded
-// run is ok, a failed or rolled-back run fails, and a still-running one is inconclusive.
+// run is ok, a failed run fails, a rolled-back run finalises the operation as rolled_back, and a
+// still-running one is inconclusive.
 func (e *installStepExecutor) Run(ctx context.Context, _ StepPlan, idempotencyKey string) (StepResultKind, []byte, error) {
 	ctx = asService(ctx)
 	runID, err := e.runIDFromStep(idempotencyKey)
@@ -87,8 +88,10 @@ func (e *installStepExecutor) Run(ctx context.Context, _ StepPlan, idempotencyKe
 			return "", nil, err
 		}
 		return stepResult(StepResultOk, runID)
-	case bootstrapRunFailed, bootstrapRunRolledBack:
+	case bootstrapRunFailed:
 		return stepResult(StepResultFailed, runID)
+	case bootstrapRunRolledBack:
+		return stepResult(StepResultRolledBack, runID)
 	default:
 		return stepResult(StepResultTimedOut, runID)
 	}

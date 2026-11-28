@@ -98,7 +98,7 @@ func TestInstallExecutorMapsRunStatus(t *testing.T) {
 		{bootstrapRunRunning, StepResultTimedOut},
 		{bootstrapRunSucceeded, StepResultOk},
 		{bootstrapRunFailed, StepResultFailed},
-		{bootstrapRunRolledBack, StepResultFailed},
+		{bootstrapRunRolledBack, StepResultRolledBack},
 	} {
 		t.Run(tc.runStatus, func(t *testing.T) {
 			db := lockTestDB(t)

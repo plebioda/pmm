@@ -63,6 +63,16 @@ func runningKind(onSucceeded *bool) OperationKind {
 	}
 }
 
+// terminalKind is runningKind with an onTerminal hook that records it ran, for the rolled-back path.
+func terminalKind(onTerminal *bool) OperationKind {
+	kind := runningKind(new(bool))
+	kind.OnTerminal = func(_ *reform.TX, _ *models.OmOperation) error {
+		*onTerminal = true
+		return nil
+	}
+	return kind
+}
+
 func runningOp(t *testing.T, db *reform.DB, clusterID string) (string, int64) {
 	t.Helper()
 	op := opWithStatus(t, db.Querier, clusterID, models.OmOperationRunning)
@@ -154,6 +164,55 @@ func TestDriveRunningStepFailureFailsOperation(t *testing.T) {
 	require.NoError(t, db.QueryRow(
 		"SELECT count(*) FROM om_attention WHERE cluster_id = $1 AND reason = 'operation_failed' AND resolved_at IS NULL", clusterID).Scan(&active))
 	assert.Equal(t, 1, active)
+}
+
+func TestDriveRunningRolledBackRunRollsBackOperation(t *testing.T) {
+	db := lockTestDB(t)
+	clusterID := lockCluster(t, db.Querier)
+	opID, epoch := runningOp(t, db, clusterID)
+	terminalRan := false
+	kind := terminalKind(&terminalRan)
+
+	outcome, err := driveRunning(t.Context(), db, opID, kind, &fakeExecutor{result: StepResultRolledBack}, epoch)
+	require.NoError(t, err)
+	assert.Equal(t, RunOperationRolledBack, outcome)
+
+	var status string
+	var finished bool
+	require.NoError(t, db.QueryRow("SELECT status, finished_at IS NOT NULL FROM om_operations WHERE id = $1", opID).Scan(&status, &finished))
+	assert.Equal(t, string(models.OmOperationRolledBack), status)
+	assert.True(t, finished, "a rolled-back operation is finished")
+	assert.True(t, terminalRan, "onTerminal compensated")
+	assert.Equal(t, 0, heldLocks(t, db, opID), "the rollback released the node locks")
+
+	var failed int
+	require.NoError(t, db.QueryRow(
+		"SELECT count(*) FROM om_attention WHERE cluster_id = $1 AND reason = 'operation_failed' AND resolved_at IS NULL", clusterID).Scan(&failed))
+	assert.Equal(t, 0, failed, "a clean rollback raises no operation_failed attention")
+}
+
+func TestDriveRunningReprobeRolledBackRunRollsBackOperation(t *testing.T) {
+	db := lockTestDB(t)
+	clusterID := lockCluster(t, db.Querier)
+	opID, epoch := runningOp(t, db, clusterID)
+	terminalRan := false
+	kind := terminalKind(&terminalRan)
+	executor := &sequenceExecutor{results: []StepResultKind{StepResultUnknown, StepResultRolledBack}}
+
+	outcome, err := driveRunning(t.Context(), db, opID, kind, executor, epoch)
+	require.NoError(t, err)
+	assert.Equal(t, RunStepPending, outcome)
+
+	outcome, err = driveRunning(t.Context(), db, opID, kind, executor, epoch)
+	require.NoError(t, err)
+	assert.Equal(t, RunOperationRolledBack, outcome)
+
+	var status string
+	require.NoError(t, db.QueryRow("SELECT status FROM om_operations WHERE id = $1", opID).Scan(&status))
+	assert.Equal(t, string(models.OmOperationRolledBack), status)
+	assert.True(t, terminalRan, "onTerminal compensated")
+	assert.Equal(t, 0, heldLocks(t, db, opID), "the rollback released the node locks")
+	assert.Equal(t, 1, stepCount(t, db, opID), "the re-probe reused the step rather than opening a second")
 }
 
 func TestDriveRunningFencedByStaleEpoch(t *testing.T) {

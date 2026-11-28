@@ -59,6 +59,7 @@ func TestMapStepResult(t *testing.T) {
 	assert.Equal(t, models.OmStepSucceeded, mapStepResult(StepResultOk))
 	assert.Equal(t, models.OmStepFailed, mapStepResult(StepResultFailed))
 	assert.Equal(t, models.OmStepFailed, mapStepResult(StepResultBlocked))
+	assert.Equal(t, models.OmStepFailed, mapStepResult(StepResultRolledBack))
 	assert.Equal(t, models.OmStepUnknown, mapStepResult(StepResultTimedOut))
 	assert.Equal(t, models.OmStepUnknown, mapStepResult(StepResultUnknown))
 }
